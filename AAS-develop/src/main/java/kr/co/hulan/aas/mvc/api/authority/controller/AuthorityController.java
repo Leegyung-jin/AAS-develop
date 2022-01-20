@@ -45,7 +45,7 @@ public class AuthorityController {
             @ApiImplicitParam(name = "authorityId", value = "권한 아이디", required = true, dataType = "Integer", paramType = "path")
     })
     @GetMapping(value="/{authorityId}", produces="application/json;charset=UTF-8")
-    public DefaultHttpRes<AuthorityResponse> detail(
+    public DefaultHttpRes<AuthorityDto> detail(
             @PathVariable(value = "authorityId", required = true) String authorityId){
         return new DefaultHttpRes(BaseCode.SUCCESS,  authorityService.findInfo(authorityId));
     }
