@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.GpsCheckPolicyInfoDao">
+
+    <!-- 현장별 GPS 정책 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.GpsCheckPolicyInfoDto">
+        SELECT
+            GCPI.idx
+            ,GCPI.wp_id
+            ,GCPI.gps_center_long
+            ,GCPI.gps_center_lat
+            ,GCPI.gps_dist_limit
+            ,GCPI.gps_round_long
+            ,GCPI.gps_round_lat
+            ,GCPI.gps_dist_limit_meter
+            ,GCPI.report_interval
+            ,GCPI.gps_interval
+            ,GCPI.allow_start
+            ,GCPI.allow_end
+            ,GCPI.upd_datetime
+            ,GCPI.updater
+            ,WP.wp_name
+        FROM gps_check_policy_info GCPI
+        INNER JOIN work_place WP ON WP.wp_id = GCPI.wp_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+        ORDER BY GCPI.upd_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 현장별 GPS 정책  -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM gps_check_policy_info GCPI
+        INNER JOIN work_place WP ON WP.wp_id = GCPI.wp_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+            WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.GpsCheckPolicyInfoDto">
+        SELECT
+            GCPI.idx
+            ,GCPI.wp_id
+            ,GCPI.gps_center_long
+            ,GCPI.gps_center_lat
+            ,GCPI.gps_dist_limit
+            ,GCPI.gps_round_long
+            ,GCPI.gps_round_lat
+            ,GCPI.gps_dist_limit_meter
+            ,GCPI.report_interval
+            ,GCPI.gps_interval
+            ,GCPI.allow_start
+            ,GCPI.allow_end
+            ,GCPI.upd_datetime
+            ,GCPI.updater
+            ,WP.wp_name
+        FROM gps_check_policy_info GCPI
+        INNER JOIN work_place WP ON WP.wp_id = GCPI.wp_id
+        WHERE GCPI.idx = #{idx}
+    </select>
+
+    <select id="findByWpId"
+            parameterType="string"
+            resultType="kr.co.hulan.aas.mvc.model.dto.GpsCheckPolicyInfoDto">
+        SELECT
+            GCPI.idx
+             ,GCPI.wp_id
+             ,GCPI.gps_center_long
+             ,GCPI.gps_center_lat
+             ,GCPI.gps_dist_limit
+             ,GCPI.gps_round_long
+             ,GCPI.gps_round_lat
+             ,GCPI.gps_dist_limit_meter
+             ,GCPI.report_interval
+             ,GCPI.gps_interval
+             ,GCPI.allow_start
+             ,GCPI.allow_end
+             ,GCPI.upd_datetime
+             ,GCPI.updater
+             ,WP.wp_name
+        FROM gps_check_policy_info GCPI
+                 INNER JOIN work_place WP ON WP.wp_id = GCPI.wp_id
+        WHERE GCPI.wp_id = #{idx}
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,114 @@
+spring:
+  profiles:
+    active: product
+    include: file-logging
+  jpa:
+    hibernate:
+      ddl-auto: none
+  datasource:
+    jpa:
+      platform: mysql
+      sql-script-encoding: UTF-8
+      driverClassName: org.mariadb.jdbc.Driver
+      jdbc-url: jdbc:mariadb://115.68.235.106:3306/hulan?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false
+      url: jdbc:mariadb://115.68.235.106:3306/hulan?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false
+      username: hulan
+      password: hl!@1352
+      initialSize: 10
+      maxActive: 10
+      maxIdle: 10
+      minIdle: 10
+      maxWait: 3000
+      validationQuery: SELECT 1
+      validationQueryTimeout: 2
+      testWhileIdle: true
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 600000
+      removeAbandoned: false
+      removeAbandonedTimeout: 60
+      logAbandoned: false
+      testOnBorrow: false
+      testOnReturn: true
+    mybatis:
+      platform: mysql
+      sql-script-encoding: UTF-8
+      driverClassName: org.mariadb.jdbc.Driver
+      jdbc-url: jdbc:mariadb://115.68.235.106:3306/hulan?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false
+      url: jdbc:mariadb://115.68.235.106:3306/hulan?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false
+      username: hulan
+      password: hl!@1352
+      initialSize: 10
+      maxActive: 10
+      maxIdle: 10
+      minIdle: 10
+      maxWait: 4000
+      validationQuery: SELECT 1
+      validationQueryTimeout: 2
+      testWhileIdle: true
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 600000
+      removeAbandoned: false
+      removeAbandonedTimeout: 60
+      logAbandoned: false
+      testOnBorrow: false
+      testOnReturn: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+
+swagger:
+  name: (PRODUCT) API Server Project
+
+file:
+  repository:
+    download: https://kun.hulan.co.kr/static/
+    path: /home/huser/static/
+
+client:
+  http:
+    support: true
+    maxPool: 10
+    routeMaxPool: 6
+    timeout: 5000
+    pushRequestUrl: http://kun.hulan.co.kr/has/fcm/push.php
+    gpsRequestUrl: http://kun.hulan.co.kr/sgs/admin/gps_info.php
+    commonMonitorRequestUrl : http://kun.hulan.co.kr/sgs/admin/gps_info
+
+
+workplace:
+  infos:
+    - wpId: 55402b34777a4413b85b662f1d305241
+      memo: |
+        CCTV 주소: http://218.153.142.223 (사용자이름: admin 비밀번호: 1234abc**)
+        자동계측기 주소: http://103.60.126.93:3000/login  (사용자이름: hlhg  비밀번호: hlhg20 )
+    - wpId: 3f3240317ada48808c30664e13fdf674
+      memo: 인천공항 화물터미널 메모
+
+otp:
+  support: false
+  defaultOtp: 1111
+
+sms:
+  support: false
+  callback: '0327198962'
+
+hicc:
+  base:
+    title: "전국 통합 관제 시스템"
+    iconUrl: https://kun.hulan.co.kr/static/image/imos-c/hulan_logo.png
+    bgColor: "black"
+    bgImgUrl: https://kun.hulan.co.kr/static/image/imos-c/default_hicc_background.png
+
+## KAFKA 설정
+kafka:
+  servers: 49.247.193.45:9092
+  account: aas
+  password: hulan0628*kfk
+  adminAccount: hulan
+  adminPassword: lan0628kfk
+
+eis:
+  config:
+    url: https://kun.hulan.co.kr/eis

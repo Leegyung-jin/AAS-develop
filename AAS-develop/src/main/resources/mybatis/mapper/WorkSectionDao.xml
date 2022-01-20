@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkSectionDao">
+
+    <!-- 공정 관리 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkSectionDto">
+        SELECT
+            WS.section_cd
+           ,WS.section_name
+           ,WS.description
+           ,WS.parent_section_cd
+           ,WS.create_date
+           ,WS.creator
+           ,WS.update_date
+           ,WS.updater
+           ,IFNULL( PWS.section_name, '' ) as parent_section_name
+        FROM work_section WS
+        LEFT JOIN work_section PWS ON PWS.section_cd = WS.parent_section_cd
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WS.section_cd like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WS.section_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='sectionCd != null and sectionCd != "" '>
+            AND WS.section_cd like concat( '%', #{sectionCd} ,'%')
+        </if>
+        <if test='sectionName != null and sectionName != "" '>
+            AND WS.section_name like concat( '%', #{sectionName} ,'%')
+        </if>
+        <if test='parentSectionCd != null and parentSectionCd != "" '>
+            <choose>
+                <when test='parentSectionCd == "TOPLEVEL" '>
+                    AND WS.parent_section_cd is null
+                </when>
+                <otherwise>
+                    AND WS.parent_section_cd = #{parentSectionCd}
+                </otherwise>
+            </choose>
+        </if>
+        ORDER BY WS.parent_section_cd IS NULL DESC, WS.parent_section_cd, WS.section_cd
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 공정 관리 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM work_section WS
+        LEFT JOIN work_section PWS ON PWS.section_cd = WS.parent_section_cd
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+            WS.section_cd like concat( '%', #{COMPLEX} ,'%')
+            OR
+            WS.section_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='sectionCd != null and sectionCd != "" '>
+            AND WS.section_cd like concat( '%', #{sectionCd} ,'%')
+        </if>
+        <if test='sectionName != null and sectionName != "" '>
+            AND WS.section_name like concat( '%', #{sectionName} ,'%')
+        </if>
+        <if test='parentSectionCd != null and parentSectionCd != "" '>
+            <choose>
+                <when test='parentSectionCd == "TOPLEVEL" '>
+                    AND WS.parent_section_cd is null
+                </when>
+                <otherwise>
+                    AND WS.parent_section_cd = #{parentSectionCd}
+                </otherwise>
+            </choose>
+        </if>
+    </select>
+
+
+    <select id="findById"
+            parameterType="string"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkSectionDto">
+        SELECT
+            WS.section_cd
+             ,WS.section_name
+             ,WS.description
+             ,WS.parent_section_cd
+             ,WS.create_date
+             ,WS.creator
+             ,WS.update_date
+             ,WS.updater
+             ,IFNULL( PWS.section_name, '' ) as parent_section_name
+        FROM work_section WS
+                 LEFT JOIN work_section PWS ON PWS.section_cd = WS.parent_section_cd
+        WHERE WS.section_cd = #{sectionCd}
+    </select>
+
+
+</mapper>

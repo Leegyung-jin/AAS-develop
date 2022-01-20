@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceCctvDao">
+  
+  <!--
+      UI 컴포넌트 > CCTV 관리
+  -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCctvDto">
+    SELECT
+      CCTV.cctv_no
+      ,CCTV.cctv_name
+      ,CCTV.cctv_kind
+      ,CCTV.cctv_url
+      ,CCTV.description
+      ,CCTV.wp_id
+      ,WP.wp_name
+      ,CCTV.status
+      ,CCTV.ptz_status
+      ,CCTV.gid
+      ,NVRCH.name as gid_name
+      ,CCTV.create_date
+      ,CCTV.creator
+      ,CCTV.update_date
+      ,CCTV.updater
+    FROM work_place_cctv CCTV
+    INNER JOIN work_place WP ON WP.wp_id = CCTV.wp_id
+    LEFT JOIN network_video_recoder_ch NVRCH ON NVRCH.gid = CCTV.gid
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        CCTV.cctv_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like  concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='cctvName != null and cctvName != "" '>
+      AND CCTV.cctv_name like  concat( '%', #{cctvName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like  concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND CCTV.wp_id = #{wpId}
+    </if>
+    <if test='status != null and status != "" '>
+      AND CCTV.status = #{status}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY CCTV.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!--
+      현장관리 > 협력사 편입
+      근태관리 >  협력사별현황
+  -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT COUNT(*)
+    FROM work_place_cctv CCTV
+    INNER JOIN work_place WP ON WP.wp_id = CCTV.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        CCTV.cctv_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like  concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='cctvName != null and cctvName != "" '>
+      AND CCTV.cctv_name like  concat( '%', #{cctvName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like  concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND CCTV.wp_id = #{wpId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+
+  <select id="findInfo"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCctvDto">
+    SELECT
+      CCTV.cctv_no
+      ,CCTV.cctv_name
+      ,CCTV.cctv_kind
+      ,CCTV.cctv_url
+      ,CCTV.description
+      ,CCTV.wp_id
+      ,WP.wp_name
+      ,CCTV.status
+      ,CCTV.ptz_status
+      ,CCTV.gid
+      ,NVRCH.name as gid_name
+      ,CCTV.create_date
+      ,CCTV.creator
+      ,CCTV.update_date
+      ,CCTV.updater
+    FROM work_place_cctv CCTV
+    INNER JOIN work_place WP ON WP.wp_id = CCTV.wp_id
+    LEFT JOIN network_video_recoder_ch NVRCH ON NVRCH.gid = CCTV.gid
+    WHERE CCTV.cctv_no = #{cctvNo}
+  </select>
+  
+  
+  <!--
+      통합관제 > CCTV 지원 현장 리스트
+  -->
+  <select id="findWorkplaceSupportCctv"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSummaryVo">
+    select
+      WP.wp_id
+      ,WP.wp_name
+    from work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    AND EXISTS(
+      select 1
+      from work_place_cctv CCTV
+      where WP.wp_id = CCTV.wp_id
+      LIMIT 1
+    )
+    ORDER BY WP.wp_name
+  </select>
+  
+</mapper>

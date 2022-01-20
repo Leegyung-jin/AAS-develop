@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.GasLogDao">
+
+  <!-- GAS -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.GasLogDto">
+    SELECT
+      WDI.idx
+      ,WDI.wp_id
+      ,WDI.device_id
+      ,WDI.mac_address
+      ,GAS.device_id AS measure_device_id
+      ,GAS.measure_time
+      ,GAS.temperature
+      ,GAS.humidity
+      ,GAS.o2
+      ,GAS.h2s
+      ,GAS.co
+      ,GAS.ch4
+      ,GAS.battery
+    FROM work_device_info WDI
+    INNER JOIN gas_log GAS ON GAS.mac_address = WDI.mac_address
+    WHERE WDI.wp_id = #{wpId}
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='macAddress != null and macAddress != "" '>
+      AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+    </if>
+    <if test='deviceId != null and deviceId != "" '>
+      AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+    </if>
+    <if test='idx != null '>
+      AND WDI.idx = #{idx}
+    </if>
+    AND WDI.device_type = 4
+    <if test='startDate != null '>
+      AND GAS.measure_time >= DATE(#{startDate})
+    </if>
+    <if test='endDate != null '>
+      AND GAS.measure_time <![CDATA[<]]> DATE_ADD( DATE(#{endDate}), interval 1 day )
+    </if>
+    ORDER BY GAS.measure_time DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <select id="findListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+      count(*) as cnt
+    FROM work_device_info WDI
+    INNER JOIN gas_log GAS ON GAS.mac_address = WDI.mac_address
+    WHERE WDI.wp_id = #{wpId}
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='macAddress != null and macAddress != "" '>
+      AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+    </if>
+    <if test='deviceId != null and deviceId != "" '>
+      AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+    </if>
+    <if test='idx != null '>
+      AND WDI.idx = #{idx}
+    </if>
+    AND WDI.device_type = 4
+    <if test='startDate != null '>
+      AND GAS.measure_time >= DATE(#{startDate})
+    </if>
+    <if test='endDate != null '>
+      AND GAS.measure_time <![CDATA[<]]> DATE_ADD( DATE(#{endDate}), interval 1 day )
+    </if>
+  </select>
+
+  <select id="findRecentGasLog"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.GasLogDto">
+    SELECT
+      WDI.idx
+      ,WDI.wp_id
+      ,WP.wp_name
+      ,WDI.device_id
+      ,WDI.mac_address
+      ,GAS.measure_time
+      ,GAS.temperature
+      ,GAS.humidity
+      ,GAS.o2
+      ,GAS.h2s
+      ,GAS.co
+      ,GAS.ch4
+      ,GAS.battery
+      ,GAS.temperature_level
+      ,GAS.o2_level
+      ,GAS.h2s_level
+      ,GAS.co_level
+      ,GAS.ch4_level
+      ,IFNULL( GAS.hazard_phrase, '') as hazard_phrase
+      ,IFNULL( GAS.dashboard_popup, 0 ) as dashboard_popup
+    FROM work_device_info WDI
+    LEFT JOIN gas_log_recent GAS ON GAS.mac_address = WDI.mac_address
+    LEFT JOIN work_place WP ON WP.wp_id = WDI.wp_id
+      AND GAS.measure_time <![CDATA[ > ]]> DATE_ADD(NOW(), interval -10 minute )
+    WHERE WDI.wp_id = #{wpId}
+    AND WDI.device_type = 4
+    ORDER BY WDI.update_datetime DESC
+  </select>
+  
+  <select id="findRecentGasLogByDevice"
+    parameterType="int"
+    resultType="kr.co.hulan.aas.mvc.model.dto.GasLogDto">
+    SELECT
+          WDI.idx
+         ,WDI.wp_id
+         ,WP.wp_name
+         ,WDI.device_id
+         ,WDI.mac_address
+         ,GAS.measure_time
+         ,GAS.temperature
+         ,GAS.humidity
+         ,GAS.o2
+         ,GAS.h2s
+         ,GAS.co
+         ,GAS.ch4
+         ,GAS.battery
+         ,GAS.temperature_level
+         ,GAS.o2_level
+         ,GAS.h2s_level
+         ,GAS.co_level
+         ,GAS.ch4_level
+         ,IFNULL( GAS.hazard_phrase, '') as hazard_phrase
+         ,IFNULL( GAS.dashboard_popup, 0 ) as dashboard_popup
+    FROM work_device_info WDI
+    LEFT JOIN gas_log_recent GAS ON GAS.mac_address = WDI.mac_address
+    LEFT JOIN work_place WP ON WP.wp_id = WDI.wp_id
+      AND GAS.measure_time <![CDATA[ > ]]> DATE_ADD(NOW(), interval -10 minute )
+    WHERE WDI.idx = #{idx}
+      AND WDI.device_type = 4
+  </select>
+  
+
+
+  <select id="findGasSafeRangeDtoList"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.GasSafeRangeDto">
+    select
+            GSR.policy_no,
+            GSR.category,
+            GSR.min,
+            GSR.max,
+            GC.category_name,
+            GC.min_measure,
+            GC.max_measure,
+            GC.unit
+        from
+            work_place WP
+            INNER JOIN gas_safe_range_policy GSRP ON GSRP.policy_no = WP.gas_policy_no
+            INNER JOIN gas_safe_range GSR ON GSR.policy_no = GSRP.policy_no
+            INNER JOIN gas_category GC ON GC.category = GSR.category
+        where
+            WP.wp_id = #{wpId}
+        order by GC.ordering
+  </select>
+
+</mapper>

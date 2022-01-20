@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.RiskAccessmentDao">
+  
+  <resultMap id="HiccRiskAccessmentInspectDetailMap" type="kr.co.hulan.aas.mvc.api.hicc.vo.risk.HiccRiskAccessmentInspectDetailVo" autoMapping="true">
+    <id property="raiNo" column="rai_no"/>
+    <association property="approvalInfo"
+      javaType="kr.co.hulan.aas.mvc.api.hicc.vo.risk.HiccRiskAccessmentApprovalVo"
+      notNullColumn="rai_apprvl_no"
+      columnPrefix="appr_"
+      autoMapping="true"
+    />
+    <collection property="itemList"
+      ofType="kr.co.hulan.aas.mvc.api.hicc.vo.risk.HiccRiskAccessmentInspectItemVo"
+      column="rai_no"
+      select="findHiccRiskAccessmentInspectItemList"
+    />
+  </resultMap>
+  
+  <sql id="RiskAccessmentApprovalColumns">
+    ${alias}.rai_apprvl_no as ${alias_column}rai_apprvl_no
+    ,${alias}.rai_no as ${alias_column}rai_no
+    ,${alias}.action  as ${alias_column}action
+    ,${alias}.comment  as ${alias_column}comment
+    ,${alias}.create_date  as ${alias_column}create_date
+    ,${alias}.creator  as ${alias_column}creator
+  </sql>
+  
+  <!--
+    통합 관제 위험도 평가 현황
+  -->
+  <select id="findState"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.risk.HiccRiskAccessmentStateVo">
+    SELECT
+      count( * ) as total_count,
+      IFNULL( sum( case when RAI.status = 2 then 1 else 0 end ), 0 ) as action_count
+    from risk_accssmnt_inspect RAI
+    inner join work_place WP ON WP.wp_id = RAI.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+  
+  <!--
+    통합 관제 위험도 평가 리스트
+  -->
+  <select id="findInspectList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.risk.HiccRiskAccessmentInspectVo">
+    SELECT
+      RAI.rai_no
+      ,RAI.wp_id
+      ,WP.wp_name
+      ,RAI.coop_mb_id
+      ,COOP.mb_name as coop_mb_name
+      ,RAI.start_date
+      ,RAI.end_date
+      ,RAI.man_mb_id
+      ,MAN.mb_name as man_mb_name
+      ,RAI.status
+      ,RAI.create_date
+      ,IFNULL((
+        SELECT concat( RAII.section, ' 외 ', (count(RAII.rai_item_no) -1 ), '건'  )
+        from risk_accssmnt_inspect_item RAII
+        WHERE RAII.rai_no = RAI.rai_no
+        group by RAII.rai_no
+      ), '') as section_summary
+      ,IFNULL((
+        select group_concat( RAII.occur_type separator ',')
+        from risk_accssmnt_inspect_item RAII
+        WHERE RAII.rai_no = RAI.rai_no
+        AND occur_type IS NOT NULL AND occur_type != ''
+      ), '') as occur_types
+      ,IFNULL((
+        select count(*)
+        from risk_accssmnt_inspect_item RAII
+        WHERE RAII.rai_no = RAI.rai_no
+      ), '') as item_count
+    from risk_accssmnt_inspect RAI
+    inner join work_place WP ON WP.wp_id = RAI.wp_id
+    inner join g5_member COOP ON COOP.mb_id = RAI.coop_mb_id
+    inner join g5_member MAN ON MAN.mb_id = RAI.man_mb_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WP.wp_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        COOP.mb_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        EXISTS(
+          select 1
+          from risk_accssmnt_inspect_item RAII
+          WHERE RAII.rai_no = RAI.rai_no
+          AND RAII.section like concat( '%', #{COMPLEX} ,'%')
+          LIMIT 1
+        )
+      )
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like  concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND COOP.mb_name like  concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='sectionName != null and sectionName != "" '>
+      AND EXISTS(
+        select 1
+        from risk_accssmnt_inspect_item RAII
+        WHERE RAII.rai_no = RAI.rai_no
+        AND RAII.section like concat( '%', #{sectionName} ,'%')
+        LIMIT 1
+      )
+    </if>
+    <if test='section != null and section != "" '>
+      AND EXISTS(
+        select 1
+        from risk_accssmnt_inspect_item RAII
+        WHERE RAII.rai_no = RAI.rai_no
+        AND RAII.section = #{section}
+        LIMIT 1
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='completed != null '>
+       <choose>
+         <when test="completed == 1">
+           AND RAI.status = 2
+         </when>
+         <when test="completed == 0 ">
+           AND RAI.status != 2
+         </when>
+       </choose>
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    order by RAI.create_date desc, WP.wp_name, COOP.mb_name
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!--
+    통합 관제 위험도 평가 전체 수
+  -->
+  <select id="countInspectList"
+    parameterType="map"
+    resultType="long">
+    SELECT
+      COUNT(*)
+    from risk_accssmnt_inspect RAI
+    inner join work_place WP ON WP.wp_id = RAI.wp_id
+    inner join g5_member COOP ON COOP.mb_id = RAI.coop_mb_id
+    inner join g5_member MAN ON MAN.mb_id = RAI.man_mb_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WP.wp_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        COOP.mb_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        EXISTS(
+          select 1
+          from risk_accssmnt_inspect_item RAII
+          WHERE RAII.rai_no = RAI.rai_no
+          AND RAII.section like concat( '%', #{COMPLEX} ,'%')
+          LIMIT 1
+        )
+      )
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like  concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND COOP.mb_name like  concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='sectionName != null and sectionName != "" '>
+      AND EXISTS(
+        select 1
+        from risk_accssmnt_inspect_item RAII
+        WHERE RAII.rai_no = RAI.rai_no
+        AND RAII.section like concat( '%', #{sectionName} ,'%')
+        LIMIT 1
+      )
+    </if>
+    <if test='section != null and section != "" '>
+      AND EXISTS(
+        select 1
+        from risk_accssmnt_inspect_item RAII
+        WHERE RAII.rai_no = RAI.rai_no
+        AND RAII.section = #{section}
+        LIMIT 1
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='completed != null '>
+      <choose>
+        <when test="completed == 1">
+          AND RAI.status = 2
+        </when>
+        <when test="completed == 0 ">
+          AND RAI.status != 2
+        </when>
+      </choose>
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+  
+  
+  <!--
+    통합 관제 위험도 평가 상세
+  -->
+  <select id="findInspectInfo"
+    parameterType="long"
+    resultMap="HiccRiskAccessmentInspectDetailMap">
+    SELECT
+      RAI.rai_no
+      ,RAI.wp_id
+      ,WP.wp_name
+      ,RAI.coop_mb_id
+      ,COOP.mb_name as coop_mb_name
+      ,RAI.start_date
+      ,RAI.end_date
+      ,RAI.man_mb_id
+      ,MAN.mb_name as man_mb_name
+      ,RAI.status
+      ,RAI.create_date
+      ,<include refid="RiskAccessmentApprovalColumns"><property name="alias" value="RAIA"/><property name="alias_column" value="appr_"/></include>
+      ,APPROVER.mb_name as appr_creator_name
+    from risk_accssmnt_inspect RAI
+    inner join work_place WP ON WP.wp_id = RAI.wp_id
+    inner join g5_member COOP ON COOP.mb_id = RAI.coop_mb_id
+    inner join g5_member MAN ON MAN.mb_id = RAI.man_mb_id
+    left join risk_accssmnt_inspect_apprvl RAIA on RAIA.rai_apprvl_no = RAI.rai_apprvl_no
+    left join g5_member APPROVER ON APPROVER.mb_id = RAIA.creator
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    AND RAI.rai_no = #{raiNo}
+  </select>
+  
+  <select id="findHiccRiskAccessmentInspectItemList"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.risk.HiccRiskAccessmentInspectItemVo">
+    SELECT
+      RAII.rai_no
+      ,RAII.rai_item_no
+      ,RAII.location
+      ,RAII.section
+      ,RAII.work_name
+      ,RAII.work_detail
+      ,RAII.risk_factor
+      ,RAII.occur_type
+      ,RAII.safety_measure
+      ,RAII.result
+      ,RAII.create_date
+    from risk_accssmnt_inspect_item RAII
+    where RAII.rai_no = #{raiNo}
+  </select>
+  
+  <select id="findSectionList"
+    resultType="string">
+    SELECT
+      distinct section
+    from risk_accssmnt_item RAIT
+  </select>
+  
+  
+</mapper>

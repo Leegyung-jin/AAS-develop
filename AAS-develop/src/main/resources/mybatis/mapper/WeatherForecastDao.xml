@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WeatherForecastDao">
+  
+  <!-- 모니터링 지원 현장관련 날씨 예보지점 코드 조회  -->
+  <select id="findWeatherPointRelatedWorkplace"
+    resultType="string">
+    select
+      distinct WFP.wfp_cd
+    from work_place WP
+    inner join work_place_address WPA ON WPA.wp_id = WP.wp_id
+    INNER JOIN work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    inner join region_sigungu RS ON RS.sigungu_cd = WPA.sigungu_code
+    inner join weather_point WFP ON WFP.wfp_cd = RS.wfp_cd
+    WHERE WP.wp_end_status = 0
+    AND ( WPMC.support_ble = 1 OR WPMC.support_gps = 1 OR WPMC.support_3d = 1 )
+  </select>
+  
+  <!-- 일주일 날씨 예보 정보 -->
+  <select id="findWeekWeatherForecast"
+    resultType="kr.co.hulan.aas.mvc.api.openapi.vo.DailyWeatherForecastInfo">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      RS.wfp_cd,
+      WFTAD.forecast_day,
+      IFNULL( WFTAD.am_rainfall, WFAD.am_rainfall ) as am_rainfall,
+      IFNULL( WFTAD.pm_rainfall, WFAD.pm_rainfall ) as pm_rainfall,
+      IFNULL( WFTAD.am_wf_form_name, WFAD.am_wf_form_name ) as am_wf_form_name,
+      IFNULL( WFTAD.pm_wf_form_name, WFAD.pm_wf_form_name ) as pm_wf_form_name,
+      IFNULL( WFTAD.am_sky_form, WFAD.am_sky_form ) as am_sky_form,
+      IFNULL( WFTAD.pm_sky_form, WFAD.pm_sky_form ) as pm_sky_form,
+      IFNULL( WFTAD.am_precipitation_form, WFAD.am_precipitation_form ) as am_precipitation_form,
+      IFNULL( WFTAD.pm_precipitation_form, WFAD.pm_precipitation_form ) as pm_precipitation_form,
+      WFTAD.temperature_high,
+      WFTAD.temperature_low
+    from work_place WP
+           inner join work_place_address WPA ON WPA.wp_id = WP.wp_id
+           inner join region_sigungu RS ON RS.sigungu_cd = WPA.sigungu_code
+           inner join weather_forecast_by_point WFTAD ON WFTAD.wfp_cd = RS.wfp_cd
+           inner join weather_point WFP ON WFP.wfp_cd = RS.wfp_cd
+           left join weather_forecast_by_region WFAD ON WFAD.wfr_cd = WFP.wfr_cd and WFTAD.forecast_day = WFAD.forecast_day
+    where WP.wp_id = #{wpId}
+    and WFTAD.forecast_day > DATE_FORMAT(now(), '%Y%m%d')
+    order by  WFTAD.forecast_day
+    LIMIT 7
+  </select>
+  
+  <!-- 하루 시간별 날씨 예보 정보 -->
+  <select id="findWeatherForecastPerHour"
+    resultType="kr.co.hulan.aas.mvc.api.openapi.vo.HourWeatherForecastInfo">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      WFBG.forecast_day,
+      WFBG.forecast_hour,
+      WFBG.rainfall,
+      WFBG.precipitation_form,
+      WFBG.precipitation,
+      WFBG.humidity,
+      WFBG.amount_snow,
+      WFBG.sky_form,
+      WFBG.temperature,
+      WFBG.wind_direction,
+      WFBG.wind_speed
+    from work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    inner join weather_forecast_by_grid WFBG ON WFBG.nx = WPMC.nx and WFBG.ny = WPMC.ny
+    where WP.wp_id =  #{wpId}
+      and WFBG.forecast_day =  #{forecastDay}
+    order by WFBG.forecast_hour
+  </select>
+
+  
+
+</mapper>

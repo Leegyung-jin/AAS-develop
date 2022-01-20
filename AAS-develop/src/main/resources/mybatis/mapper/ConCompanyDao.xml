@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.ConCompanyDao">
+    <!-- 인원관리 > 건설사 목록 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.api.member.dto.ConstructionCompanyDto">
+        SELECT
+            cc_id,
+            cc_name,
+            cc_num,
+            cc_addr1,
+            cc_addr2,
+            cc_tel,
+            cc_datetime,
+            IFNULL( ( select count(*) from work_place WP where WP.cc_id = CC.cc_id ), 0 ) AS wp_count,
+            IFNULL( ( select count(*) from work_place_coop WPC INNER JOIN work_place WP ON WPC.wp_id = WP.wp_id where WP.cc_id = CC.cc_id ), 0 ) AS coop_count,
+            IFNULL( ( select count(*) from work_place_worker WPW INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id where WP.cc_id = CC.cc_id ), 0 ) AS worker_count
+        FROM con_company CC
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                CC.cc_num like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccNum != null and ccNum != "" '>
+            AND CC.cc_num like concat( '%', #{ccNum} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND EXISTS(
+                select 1
+                from construction_site CS
+                where CS.cc_id = CC.cc_id
+                and CS.wp_id = #{wpId}
+            )
+        </if>
+        <if test='excludeWpId != null and excludeWpId != "" '>
+            AND NOT EXISTS(
+            select 1
+            from construction_site CS
+            where CS.cc_id = CC.cc_id
+            and CS.wp_id = #{excludeWpId}
+            )
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionCompany">
+            <property name="aliasConstructionCompany" value="CC"/>
+        </include>
+        ORDER BY cc_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+        LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 인원관리 > 건설사 목록 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        FROM con_company CC
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                CC.cc_num like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccNum != null and ccNum != "" '>
+            AND CC.cc_num like concat( '%', #{ccNum} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND EXISTS(
+            select 1
+            from construction_site CS
+            where CS.cc_id = CC.cc_id
+            and CS.wp_id = #{wpId}
+            )
+        </if>
+        <if test='excludeWpId != null and excludeWpId != "" '>
+            AND NOT EXISTS(
+            select 1
+            from construction_site CS
+            where CS.cc_id = CC.cc_id
+            and CS.wp_id = #{excludeWpId}
+            )
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionCompany">
+            <property name="aliasConstructionCompany" value="CC"/>
+        </include>
+    </select>
+
+
+    <select id="findListForCode"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.api.member.dto.ConstructionCompanyDto">
+        SELECT
+            cc_id,
+            cc_name
+        FROM con_company CC
+        WHERE 'x' = 'x'
+        <if test='loginCcId != null and loginCcId != "" '>
+          AND CC.cc_id = #{loginCcId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND EXISTS(
+                SELECT 'x'
+                FROM work_place_coop WPC
+                INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+                WHERE WPC.cc_id = CC.cc_id
+                AND WPC.coop_mb_id = #{coopMbId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND EXISTS(
+                SELECT 'x'
+                FROM construction_site CS
+                LEFT JOIN gps_check_policy_info GCPI ON GCPI.wp_id = CS.wp_id
+                WHERE CS.cc_id = CC.cc_id
+                AND CS.wp_id = #{wpId}
+                <choose>
+                    <when test='gps != null and gps eq "1" '>
+                        AND GCPI.wp_id IS NOT NULL
+                    </when>
+                    <when test='gps != null and gps eq "0" '>
+                        AND GCPI.wp_id IS NULL
+                    </when>
+                </choose>
+                LIMIT 1
+            )
+        </if>
+        <choose>
+            <when test='gps != null and gps eq "1" '>
+                AND EXISTS(
+                SELECT 'x'
+                FROM work_place WP
+                INNER JOIN gps_check_policy_info GCPI ON GCPI.wp_id = WP.wp_id
+                WHERE WP.cc_id = CC.cc_id
+                LIMIT 1
+                )
+            </when>
+            <when test='gps != null and gps eq "0" '>
+                AND NOT EXISTS(
+                SELECT 'x'
+                FROM work_place WP
+                INNER JOIN gps_check_policy_info GCPI ON GCPI.wp_id = WP.wp_id
+                WHERE WP.cc_id = CC.cc_id
+                LIMIT 1
+                )
+            </when>
+        </choose>
+        ORDER BY cc_name ASC
+    </select>
+    
+    <select id="findInfo" parameterType="string" resultType="kr.co.hulan.aas.mvc.model.dto.ConCompanyDto">
+        SELECT
+            CC.cc_id,
+            CC.cc_name,
+            CC.cc_num,
+            CC.cc_zip1,
+            CC.cc_zip2,
+            CC.cc_addr1,
+            CC.cc_addr2,
+            CC.cc_addr3,
+            CC.cc_addr_jibeon,
+            CC.cc_tel,
+            CC.cc_memo,
+            HI.hicc_no,
+            HI.hicc_name,
+            HI.icon_file_location,
+            HI.icon_file_name,
+            HI.icon_file_name_org,
+            HI.icon_file_path,
+            HI.bg_img_file_location,
+            HI.bg_img_file_name,
+            HI.bg_img_file_name_org,
+            HI.bg_img_file_path,
+            HI.bg_color,
+            CC.cc_datetime
+        FROM con_company CC
+        LEFT JOIN hicc_info HI ON HI.hicc_no = CC.hicc_no
+        WHERE CC.cc_id = #{ccId}
+    </select>
+
+</mapper>

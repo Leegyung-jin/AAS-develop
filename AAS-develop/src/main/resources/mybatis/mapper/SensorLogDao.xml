@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorLogDao">
+
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogDto">
+        SELECT
+            sl_idx
+            ,sd_idx
+            ,sd_name
+            ,si_code
+            ,si_type
+            ,si_place1
+            ,si_place2
+            ,wp_id
+            ,wp_name
+            ,cc_id
+            ,cc_name
+            ,wpw_id
+            ,coop_mb_id
+            ,coop_mb_name
+            ,mb_id
+            ,mb_name
+            ,sl_datetime
+        FROM sensor_log SL
+        WHERE 'x' = 'x'
+        <if test='siType != null and siType != "" '>
+            AND si_type = #{siType}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND cc_id = #{ccId}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND coop_mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='sdIdx != null '>
+            AND sd_idx = #{sdIdx}
+        </if>
+        <if test='siPlace1 != null and siPlace1 != "" '>
+            AND si_place1 like concat( '%', #{siPlace1} ,'%')
+        </if>
+        <if test='siPlace2 != null and siPlace2 != "" '>
+            AND si_place2 like concat( '%', #{siPlace2} ,'%')
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND sl_datetime between #{startDate} and #{endDate}
+        </if>
+        ORDER BY sl_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM sensor_log SL
+        WHERE 'x' = 'x'
+        <if test='siType != null and siType != "" '>
+            AND si_type = #{siType}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND cc_id = #{ccId}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND coop_mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='sdIdx != null '>
+            AND sd_idx = #{sdIdx}
+        </if>
+        <if test='siPlace1 != null and siPlace1 != "" '>
+            AND si_place1 like concat( '%', #{siPlace1} ,'%')
+        </if>
+        <if test='siPlace2 != null and siPlace2 != "" '>
+            AND si_place2 like concat( '%', #{siPlace2} ,'%')
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND sl_datetime between #{startDate} and #{endDate}
+        </if>
+    </select>
+
+
+
+    <select id="findWorkerSafetySensorLogListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogDto">
+        SELECT
+            sl_idx
+            ,sd_idx
+            ,sd_name
+            ,si_code
+            ,si_type
+            ,si_place1
+            ,si_place2
+            ,wp_id
+            ,wp_name
+            ,cc_id
+            ,cc_name
+            ,wpw_id
+            ,coop_mb_id
+            ,coop_mb_name
+            ,mb_id
+            ,mb_name
+            ,sl_datetime
+        FROM sensor_log SL
+        WHERE 'x' = 'x'
+        <if test='mbId != null and mbId != "" '>
+            AND SL.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND SL.cc_id = #{ccId}
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND SL.sl_datetime between #{startDate} and #{endDate}
+        </if>
+        ORDER BY SL.sl_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findWorkerSafetySensorLogListCountByCondition"
+            parameterType="map"
+            resultType="long">
+
+        SELECT
+        COUNT(*) AS CNT
+        FROM sensor_log SL
+        WHERE 'x' = 'x'
+        <if test='mbId != null and mbId != "" '>
+            AND SL.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND SL.cc_id = #{ccId}
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND SL.sl_datetime between #{startDate} and #{endDate}
+        </if>
+    </select>
+
+
+    <select id="findByIdList"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogDto">
+        SELECT
+             SL.mb_id
+             ,SL.wp_id
+             ,G5M.mb_18 AS push_normal
+             ,G5M.mb_19 AS push_danger
+             ,G5M.mb_20 AS device_id
+             ,G5M.app_version
+        FROM (
+            SELECT
+                SL.mb_id
+                ,SL.wp_id
+            FROM sensor_log SL
+            WHERE SL.sl_idx IN <foreach collection="slIdxs" item="slIdx" index="index" separator="," open="(" close=")">#{slIdx}</foreach>
+            group by SL.mb_id, SL.wp_id
+        ) SL INNER JOIN g5_member G5M ON G5M.mb_id = SL.mb_id
+    </select>
+
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogDto">
+        SELECT
+            SL.sl_idx
+            ,SL.sd_idx
+            ,SL.sd_name
+            ,SL.si_code
+            ,SL.si_type
+            ,SL.si_place1
+            ,SL.si_place2
+            ,SL.wp_id
+            ,SL.wp_name
+            ,SL.cc_id
+            ,SL.cc_name
+            ,SL.wpw_id
+            ,SL.coop_mb_id
+            ,SL.coop_mb_name
+            ,SL.mb_id
+            ,SL.mb_name
+            ,SL.sl_datetime
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_20 AS device_id
+        FROM sensor_log SL
+            INNER JOIN g5_member G5M ON G5M.mb_id = SL.mb_id
+        WHERE SL.sl_idx = #{slIdx}
+    </select>
+
+</mapper>

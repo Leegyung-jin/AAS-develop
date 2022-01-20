@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.RecruitApplyDao">
+
+    <!-- 구인관리 > 구인지원자 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.RecruitApplyDto">
+        SELECT
+            RA.ra_idx
+            ,RA.rc_idx
+            ,RA.wp_id
+            ,RA.wp_name
+            ,RA.coop_mb_id
+            ,RA.coop_mb_name
+            ,RA.mb_id
+            ,RA.mb_name
+            ,RA.mb_birth
+            ,RA.ra_datetime
+            ,RA.ra_status
+            ,IFNULL( RC.rc_title, '' ) AS rc_title
+            ,WP.cc_id
+            ,WP.cc_name
+        from recruit_apply RA
+            INNER JOIN work_place WP ON WP.wp_id = RA.wp_id
+            LEFT JOIN recruit RC ON RC.rc_idx = RA.rc_idx
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                RA.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR (
+                    RC.rc_title IS NOT NULL AND RC.rc_title like concat( '%', #{COMPLEX} ,'%')
+                )
+                OR
+                RA.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='rcIdx != null and rcIdx != "" '>
+            AND RA.rc_idx = #{rcIdx}
+        </if>
+        <if test='rcTitle != null and rcTitle != "" '>
+            AND RC.rc_title IS NOT NULL
+            AND RC.rc_title like concat( '%', #{rcTitle} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+                SELECT 1
+                FROM construction_site CS
+                WHERE CS.wp_id = RA.wp_id
+                AND CS.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND RA.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='raStatus != null and raStatus != "" '>
+            AND RA.ra_status = #{raStatus}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND RA.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND RA.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <choose>
+            <when test=" mbLevel != null and mbLevel == 4 ">
+                AND RA.ra_status = 1
+                AND RA.mb_id not exists (
+                    select 1
+                    from work_place_worker WPW
+                    where WPW.wp_id = RA.wp_id
+                    and WPW.worker_mb_id = RA.mb_id
+                    LIMIT 1
+                )
+            </when>
+            <otherwise>
+                AND RA.ra_status in(0, 1)
+            </otherwise>
+        </choose>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+        ORDER BY RA.ra_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 구인관리 > 구인지원자 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        from recruit_apply RA
+        INNER JOIN work_place WP ON WP.wp_id = RA.wp_id
+        LEFT JOIN recruit RC ON RC.rc_idx = RA.rc_idx
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                RA.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR (
+                RC.rc_title IS NOT NULL AND RC.rc_title like concat( '%', #{COMPLEX} ,'%')
+                )
+                OR
+                RA.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='rcIdx != null and rcIdx != "" '>
+            AND RA.rc_idx = #{rcIdx}
+        </if>
+        <if test='rcTitle != null and rcTitle != "" '>
+            AND RC.rc_title IS NOT NULL
+            AND RC.rc_title like concat( '%', #{rcTitle} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+            SELECT 1
+            FROM construction_site CS
+            WHERE CS.wp_id = RA.wp_id
+            AND CS.cc_id = #{ccId}
+            LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND RA.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='raStatus != null and raStatus != "" '>
+            AND RA.ra_status = #{raStatus}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND RA.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND RA.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <choose>
+            <when test=" mbLevel != null and mbLevel == 4 ">
+                AND RA.ra_status = 1
+                AND RA.mb_id not exists (
+                select 1
+                from work_place_worker WPW
+                where WPW.wp_id = RA.wp_id
+                and WPW.worker_mb_id = RA.mb_id
+                LIMIT 1
+                )
+            </when>
+            <otherwise>
+                AND RA.ra_status in(0, 1)
+            </otherwise>
+        </choose>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.RecruitApplyDto">
+        SELECT
+            RA.ra_idx
+             ,RA.rc_idx
+             ,RA.wp_id
+             ,RA.wp_name
+             ,RA.coop_mb_id
+             ,RA.coop_mb_name
+             ,RA.mb_id
+             ,RA.mb_name
+             ,RA.mb_birth
+             ,RA.ra_datetime
+             ,RA.ra_status
+             ,IFNULL( RC.rc_title, '' ) AS rc_title
+             ,WP.cc_id
+             ,WP.cc_name
+             ,G5M.mb_20 AS device_id
+             ,G5M.app_version
+        from recruit_apply RA
+            INNER JOIN work_place WP ON WP.wp_id = RA.wp_id
+            INNER JOIN g5_member G5M ON G5M.mb_id = RA.mb_id
+            LEFT JOIN recruit RC ON RC.rc_idx = RA.rc_idx
+        WHERE RA.ra_idx = #{raIdx}
+    </select>
+
+    <!--
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.RecruitApplyDto">
+        INSERT INTO recruit_apply (
+            rc_idx
+            ,wp_id
+            ,wp_name
+            ,coop_mb_id
+            ,coop_mb_name
+            ,mb_id
+            ,mb_name
+            ,mb_birth
+            ,ra_datetime
+            ,ra_status
+        )
+        VALUES (
+            #{rcIdx}
+            ,#{wpId}
+            ,#{wpName}
+            ,#{coopMbId}
+            ,#{coopMbName}
+            ,#{mbId}
+            ,#{mbName}
+            ,#{mbBirth}
+            ,NOW()
+            ,#{raStatus}
+        );
+    </insert>
+    -->
+
+    <update id="updateStatus" parameterType="kr.co.hulan.aas.mvc.model.dto.RecruitApplyDto">
+        UPDATE recruit_apply
+        SET
+            ra_status  = #{raStatus}
+        WHERE ra_idx = #{raIdx}
+    </update>
+
+    <update id="updateMbName" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        update recruit_apply
+        set mb_name = #{name}
+        where mb_id = #{mbId}
+    </update>
+
+</mapper>

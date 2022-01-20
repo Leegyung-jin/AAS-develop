@@ -1,0 +1,20 @@
+## HEAP_LOG_DIR, SPRING_PROFILES, HOST_NAME
+
+-Dspring.profiles.active=$SPRING_PROFILES
+-Duser.timezone=GMT+09:00
+-Djava.security.egd=file:/dev/./urandom
+-Dfile.encoding=UTF-8
+-XX:MetaspaceSize=256M
+-XX:MaxMetaspaceSize=512M
+-verbose:gc
+-XX:+UseParallelGC
+-XX:+PrintGCDetails
+-XX:+PrintGCDateStamps
+-Xloggc:$HEAP_LOG_DIR/gc-%t.log
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=$HEAP_LOG_DIR/jvm.hprof
+-Dcom.sun.management.jmxremote
+-Dcom.sun.management.jmxremote.authenticate=false
+-Djava.rmi.server.hostname=$HOST_NAME
+-Dcom.sun.management.jmxremote.ssl=false
+

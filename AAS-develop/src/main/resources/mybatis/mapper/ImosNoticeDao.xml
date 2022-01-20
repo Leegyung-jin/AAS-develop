@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.ImosNoticeDao">
+  
+  <resultMap id="imosNoticeDetailMap" type="kr.co.hulan.aas.mvc.api.hicc.vo.ImosNoticeVo" autoMapping="true">
+    <id property="imntNo" column="imnt_no"/>
+    <collection property="noticeWorkplaceList"
+      ofType="kr.co.hulan.aas.mvc.model.dto.ImosNoticeWorkplaceDto"
+      column="imnt_no"
+      select="findImosNoticeWorkplaceList"
+      autoMapping="true"
+    />
+    <collection property="detachedFileList"
+      ofType="kr.co.hulan.aas.mvc.model.dto.ImosNoticeFileDto"
+      column="imnt_no"
+      select="findImosNoticeFileList"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  
+  <!-- 통합관제 > 현장 공지사항 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.ImosNoticeDto">
+    SELECT
+      IMNT.imnt_no,
+      IMNT.subject,
+      IMNT.content,
+      IMNT.importance,
+      IMNT.noti_all_flag,
+      case
+          when IMNT.noti_all_flag = 1 then '전체'
+          else (
+            SELECT
+              case
+                when count(*) > 1 then  concat( WP.wp_name, ' 외 ', ( count(*) - 1 ) )
+                when count(*) = 1 then  WP.wp_name
+                else ''
+              end
+            FROM imos_notice_workplace IMNTWP2
+            INNER JOIN work_place WP ON WP.wp_id = IMNTWP2.wp_id
+            WHERE IMNTWP2.imnt_no = IMNT.imnt_no
+          )
+      end as wp_name_summary,
+      IMNT.create_date,
+      IMNT.creator,
+      IMNT.update_date,
+      IMNT.updater
+    FROM imos_notice IMNT
+    WHERE (
+      IMNT.noti_all_flag = 1
+      OR
+      EXISTS(
+        SELECT 1
+        FROM imos_notice_workplace IMNTWP
+        INNER JOIN work_place WP ON WP.wp_id = IMNTWP.wp_id
+        WHERE IMNTWP.imnt_no = IMNT.imnt_no
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+        <if test='wpId != null and wpId != "" '>
+          AND IMNTWP.wp_id = #{wpId}
+        </if>
+        <if test='wpIdList != null '>
+          AND IMNTWP.wp_id IN <foreach collection="wpIdList" item="wpId" index="index" separator="," open="(" close=")">#{wpId}</foreach>
+        </if>
+        LIMIT 1
+      )
+    )
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        IMNT.subject like concat( '%', #{COMPLEX} ,'%')
+        OR
+        IMNT.content like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='subject != null and subject != "" '>
+      AND IMNT.subject like concat( '%', #{subject} ,'%')
+    </if>
+    <if test='content != null and content != "" '>
+      AND IMNT.content like concat( '%', #{content} ,'%')
+    </if>
+    <if test='startDate != null '>
+      AND IMNT.create_date >= DATE(#{startDate})
+    </if>
+    <if test='endDate != null '>
+      AND IMNT.create_date <![CDATA[<]]> DATE_ADD( DATE(#{endDate}), interval 1 day )
+    </if>
+    ORDER BY <choose>
+      <when test='ordBy != null and ordBy == 1'>IMNT.create_date</when>
+      <when test='ordBy != null and ordBy == 2'>wp_name_summary</when>
+      <otherwise>IMNT.create_date</otherwise>
+    </choose>
+    <choose>
+      <when test='ordAsc != null and ordAsc == 1'> ASC</when>
+      <otherwise> DESC</otherwise>
+    </choose>
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 통합관제 > 현장 공지사항 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM imos_notice IMNT
+    WHERE (
+    IMNT.noti_all_flag = 1
+    OR
+    EXISTS(
+      SELECT 1
+      FROM imos_notice_workplace IMNTWP
+      INNER JOIN work_place WP ON WP.wp_id = IMNTWP.wp_id
+      WHERE IMNTWP.imnt_no = IMNT.imnt_no
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+      <if test='wpId != null and wpId != "" '>
+        AND IMNTWP.wp_id = #{wpId}
+      </if>
+      <if test='wpIdList != null '>
+        AND IMNTWP.wp_id IN <foreach collection="wpIdList" item="wpId" index="index" separator="," open="(" close=")">#{wpId}</foreach>
+      </if>
+      LIMIT 1
+      )
+    )
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        IMNT.subject like concat( '%', #{COMPLEX} ,'%')
+        OR
+        IMNT.content like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='subject != null and subject != "" '>
+      AND IMNT.subject like concat( '%', #{subject} ,'%')
+    </if>
+    <if test='content != null and content != "" '>
+      AND IMNT.content like concat( '%', #{content} ,'%')
+    </if>
+    <if test='startDate != null '>
+      AND IMNT.create_date >= DATE(#{startDate})
+    </if>
+    <if test='endDate != null '>
+      AND IMNT.create_date <![CDATA[<]]> DATE_ADD( DATE(#{endDate}), interval 1 day )
+    </if>
+  </select>
+  
+  <!-- 통합관제 > 현장 공지사항 상세 -->
+  <select id="findInfo"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.ImosNoticeDto">
+    SELECT
+      IMNT.imnt_no,
+      IMNT.subject,
+      IMNT.content,
+      IMNT.importance,
+      IMNT.noti_all_flag,
+      case
+        when IMNT.noti_all_flag = 1 then '전체'
+        else (
+          SELECT
+            case
+              when count(*) > 1 then  concat( WP.wp_name, ' 외 ', ( count(*) - 1 ) )
+              when count(*) = 1 then  WP.wp_name
+              else ''
+              end
+          FROM imos_notice_workplace IMNTWP2
+                 INNER JOIN work_place WP ON WP.wp_id = IMNTWP2.wp_id
+          WHERE IMNTWP2.imnt_no = IMNT.imnt_no
+        )
+        end as wp_name_summary,
+      IMNT.create_date,
+      IMNT.creator,
+      IMNT.update_date,
+      IMNT.updater
+    FROM imos_notice IMNT
+    WHERE IMNT.imnt_no = #{imntNo}
+  </select>
+  
+  <select id="findDetailInfo"
+    parameterType="long"
+    resultMap="imosNoticeDetailMap">
+    SELECT
+      IMNT.imnt_no,
+      IMNT.subject,
+      IMNT.content,
+      IMNT.importance,
+      IMNT.noti_all_flag,
+      IMNT.create_date,
+      IMNT.creator,
+      IMNT.update_date,
+      IMNT.updater
+    FROM imos_notice IMNT
+    WHERE IMNT.imnt_no = #{imntNo}
+  </select>
+  
+  <select id="findImosNoticeWorkplaceList"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.ImosNoticeWorkplaceDto">
+    SELECT
+      IMNTWP.imnt_no,
+      IMNTWP.wp_id,
+      WP.wp_name,
+      IMNTWP.create_date,
+      IMNTWP.creator
+    FROM imos_notice_workplace IMNTWP
+    INNER JOIN work_place WP ON WP.wp_id = IMNTWP.wp_id
+    WHERE IMNTWP.imnt_no = #{imntNo}
+  </select>
+  
+  <select id="findImosNoticeFileList"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.ImosNoticeFileDto">
+    SELECT
+      IMNTF.imnt_no,
+      IMNTF.file_no,
+      IMNTF.file_name,
+      IMNTF.file_name_org,
+      IMNTF.file_path,
+      IMNTF.file_location,
+      IMNTF.create_date,
+      IMNTF.creator
+    FROM imos_notice_file IMNTF
+    WHERE IMNTF.imnt_no = #{imntNo}
+  </select>
+
+
+</mapper>

@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkGeofenceInfoDao">
+
+  <resultMap id="geofenceGroupResult" type="kr.co.hulan.aas.mvc.model.dto.WorkGeofenceGroupDto" autoMapping="true">
+    <id property="wpId" column="wp_id"/>
+    <id property="wpSeq" column="wp_seq"/>
+    <collection property="fenceLocations"
+      ofType="kr.co.hulan.aas.mvc.model.dto.WorkGeofenceInfoDto"
+    >
+      <id property="wpId" column="wgi_wp_id"/>
+      <id property="wpSeq" column="wgi_wp_seq"/>
+      <id property="seq" column="wgi_seq"/>
+      <result property="latitude" column="wgi_latitude"/>
+      <result property="longitude" column="wgi_longitude"/>
+    </collection>
+  </resultMap>
+
+  <sql id="workGeofenceColumns">
+     ${alias}.wp_id as ${alias_column}wp_id
+     ,${alias}.wp_seq as ${alias_column}wp_seq
+     ,${alias}.seq  as ${alias_column}seq
+     ,${alias}.latitude  as ${alias_column}latitude
+     ,${alias}.longitude  as ${alias_column}longitude
+  </sql>
+  <!--
+      안전화면
+  -->
+  <select id="findAll"
+          parameterType="string"
+          resultType="kr.co.hulan.aas.mvc.model.dto.WorkGeofenceInfoDto">
+    SELECT
+      WGI.wp_id
+      ,WGI.wp_seq
+      ,WGI.seq
+      ,WGI.latitude
+      ,WGI.longitude
+    FROM work_geofence_info WGI
+    WHERE WGI.wp_id = #{wpId}
+    ORDER BY WGI.wp_seq, WGI.seq
+  </select>
+  
+  <select id="findGeofenceGroupListByWorkplace"
+    parameterType="string"
+    resultMap="geofenceGroupResult">
+  SELECT
+    WGG.wp_id
+    ,WP.wp_name
+    ,WGG.wp_seq
+    ,WGG.fence_name
+    ,WGG.center_latitude
+    ,WGG.center_longitude
+    ,WGG.create_date
+    ,WGG.creator
+    ,WGG.update_date
+    ,WGG.updater
+    ,<include refid="workGeofenceColumns"><property name="alias" value="WGI"/><property name="alias_column" value="wgi_"/></include>
+  FROM work_geofence_group WGG
+  INNER JOIN work_geofence_info WGI ON WGG.wp_id = WGI.wp_id AND WGG.wp_seq = WGI.wp_seq
+  INNER JOIN work_place WP ON WP.wp_id = WGG.wp_id
+  WHERE WGG.wp_id = #{wpId}
+  ORDER BY WGI.wp_id, WGI.wp_seq, WGI.seq
+  </select>
+  
+  <select id="findGroupListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkGeofenceGroupDto">
+    SELECT
+      WGG.wp_id
+      ,WP.wp_name
+      ,WGG.wp_seq
+      ,WGG.fence_name
+      ,WGG.center_latitude
+      ,WGG.center_longitude
+      ,WGG.create_date
+      ,WGG.creator
+      ,WGG.update_date
+      ,WGG.updater
+    FROM work_geofence_group WGG
+    INNER JOIN work_place WP ON WP.wp_id = WGG.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WGG.fence_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WGG.wp_id = #{wpId}
+    </if>
+    <if test='fenceName != null and fenceName != "" '>
+      AND WGG.fence_name like concat( '%', #{fenceName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY WGG.create_date DESC
+  </select>
+  
+  <select id="countGroupListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+      count(*)
+    FROM work_geofence_group WGG
+    INNER JOIN work_place WP ON WP.wp_id = WGG.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WGG.fence_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WGG.wp_id = #{wpId}
+    </if>
+    <if test='fenceName != null and fenceName != "" '>
+      AND WGG.fence_name like concat( '%', #{fenceName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+  
+  <select id="findGroupById"
+    parameterType="map"
+    resultMap="geofenceGroupResult">
+    SELECT
+      WGG.wp_id
+      ,WP.wp_name
+      ,WGG.wp_seq
+      ,WGG.fence_name
+      ,WGG.center_latitude
+      ,WGG.center_longitude
+      ,WGG.create_date
+      ,WGG.creator
+      ,WGG.update_date
+      ,WGG.updater
+      ,<include refid="workGeofenceColumns"><property name="alias" value="WGI"/><property name="alias_column" value="wgi_"/></include>
+    FROM work_geofence_group WGG
+    INNER JOIN work_place WP ON WP.wp_id = WGG.wp_id
+    LEFT JOIN work_geofence_info WGI ON WGG.wp_id = WGI.wp_id AND WGG.wp_seq = WGI.wp_seq
+    WHERE WGG.wp_id = #{wpId}
+    AND WGG.wp_seq = #{wpSeq}
+  </select>
+
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.AuthorityUserDao">
+  
+  <!-- 전체 및 검색된 등록 가능한 사용자 목록 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityUserDto">
+    SELECT
+        MB.mb_id
+       ,MB.mb_name
+       ,MB.mb_level
+       ,MBLV.mb_level_name
+       ,AULV.update_date
+    FROM g5_member MB
+      INNER JOIN authority_level AULV ON AULV.mb_level = MB.mb_level
+      INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      MB.mb_id like concat( '%', #{COMPLEX} ,'%')
+      OR
+      MB.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND MB.mb_id like concat( '%', #{mbId} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND MB.mb_name like concat( '%', #{mbName} ,'%')
+    </if>
+    ORDER BY MB.mb_id DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 검색된 권한 개수 -->
+  <select id="countListByCondition"
+          parameterType="map"
+          resultType="Integer">
+    SELECT
+    count(*) AS CNT
+    FROM g5_member MB
+    INNER JOIN authority_level AULV ON AULV.mb_level = MB.mb_level
+    INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
+    WHERE   'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      MB.mb_id like concat( '%', #{COMPLEX} ,'%')
+      OR
+      MB.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND MB.mb_id like concat( '%', #{mbId} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND MB.mb_name like concat( '%', #{mbName} ,'%')
+    </if>
+  </select>
+</mapper>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.BookmarkDao">
+
+  <!-- BLE Bookmark List 정보 -->
+  <select id="findBleBookmarkList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.bookmark.vo.BleBookmarkVo">
+    SELECT
+      BMB.mb_id
+      ,BMB.wp_id
+      ,BMB.building_no
+      ,BD.building_name
+      ,BMB.floor
+      ,BDF.floor_name
+    FROM bookmark_ble BMB
+    INNER JOIN work_place WP ON WP.wp_id = BMB.wp_id
+    INNER JOIN building BD ON BD.building_no = BMB.building_no
+    INNER JOIN building_floor BDF ON BDF.building_no = BMB.building_no AND BDF.floor = BMB.floor
+    WHERE BMB.mb_id = #{mbId}
+    AND BMB.wp_id =  #{wpId}
+    ORDER BY BMB.update_date DESC
+  </select>
+
+
+  <!-- Gps(fence) Bookmark List 정보 -->
+  <select id="findGpsBookmarkList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.bookmark.vo.GpsBookmarkVo">
+    SELECT
+      BMG.mb_id
+      ,BMG.wp_id
+      ,BMG.wp_seq
+      ,WGG.fence_name
+    FROM bookmark_gps BMG
+    INNER JOIN work_place WP ON WP.wp_id = BMG.wp_id
+    INNER JOIN work_geofence_group WGG ON WGG.wp_id = BMG.wp_id and WGG.wp_seq = BMG.wp_seq
+    WHERE BMG.mb_id = #{mbId}
+    AND BMG.wp_id =  #{wpId}
+    ORDER BY BMG.update_date DESC, BMG.wp_seq
+  </select>
+
+</mapper>
+

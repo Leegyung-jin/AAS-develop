@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.GpsMonitoringDao">
+
+  <select id="findCurrentWorkerCount"
+    parameterType="string"
+    resultType="int">
+    SELECT
+       COUNT(distinct WPW.worker_mb_id) AS total_cnt
+    FROM work_place_worker WPW
+    INNER JOIN gps_location GL ON WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+    WHERE WPW.wp_id = #{wpId}
+    AND WPW.wpw_out = 0
+    and GL.mb_id is not null
+    AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+  </select>
+
+   <!--
+  <select id="findAttendantSituationListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantSituationVo">
+    SELECT
+      WPC.wp_id,
+      WPC.wp_name,
+      WPC.coop_mb_id,
+      WPC.coop_mb_name,
+      WPC.work_section_a,
+      WPC.work_section_name_a,
+      IFNULL((
+        select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPC.wp_id
+        AND SLI.coop_mb_id = WPC.coop_mb_id
+        AND SLI.sli_in_si_type = '출입용'
+        AND SLI.sli_in_datetime between DATE( NOW() ) and STR_TO_DATE( concat( DATE_FORMAT( NOW(), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+      ), 0) AS worker_today_count,
+      IFNULL((
+      SELECT
+        COUNT(distinct WPW.worker_mb_id) AS total_cnt
+        FROM work_place_worker WPW
+        INNER JOIN gps_location GL ON WPW.wp_id = GL.wp_id AND WPW.coop_mb_id = GL.coop_mb_id AND WPW.worker_mb_id = GL.mb_id
+        WHERE WPW.wpw_out = 0
+        AND WPW.wp_id = WPC.wp_id
+        AND WPW.coop_mb_id = WPC.coop_mb_id
+        and GL.mb_id is not null
+        AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+        AND EXISTS(
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id
+          and SLI.coop_mb_id = WPW.coop_mb_id
+          and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          and SLI.sli_in_datetime between DATE( NOW() ) and STR_TO_DATE( concat( DATE_FORMAT( NOW(), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+          LIMIT 1
+        )
+      ), 0) AS worker_current_count
+    FROM (
+      SELECT
+        WPC.wp_id,
+        WPC.wp_name,
+        WPC.coop_mb_id,
+        IFNULL( G5M.mb_name, WPC.coop_mb_name) AS coop_mb_name,
+        WPC.work_section_a,
+        IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a
+      FROM work_place_coop WPC
+      INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+      LEFT JOIN g5_member G5M ON G5M.mb_id = WPC.coop_mb_id
+      WHERE 'x' = 'x'
+      <if test='wpId != null and wpId != "" '>
+        AND WPC.wp_id = #{wpId}
+      </if>
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPC.coop_mb_id = #{coopMbId}
+      </if>
+      ORDER BY WPC.wpc_datetime DESC
+      <if test="startRow != null and pageSize != null ">
+        LIMIT #{startRow}, #{pageSize}
+      </if>
+    ) WPC
+  </select>
+  -->
+  
+  <select id="findAttendantSituationListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantSituationVo">
+  
+    select
+      WPC.wp_id,
+      WP.wp_name,
+      WPC.coop_mb_id,
+      G5M_COOP.mb_name as coop_mb_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      IFNULL( WPW.total_worker, 0 ) as worker_today_count ,
+      IFNULL( WPW.current_worker, 0 ) as worker_current_count
+    from (
+      select
+        WPW.wp_id,
+        WPW.coop_mb_id,
+        count(WPW.worker_mb_id) as total_worker,
+        sum( IFNULL((
+          SELECT 1
+          FROM gps_location GL
+          WHERE WPW.wp_id = GL.wp_id AND WPW.worker_mb_id = GL.mb_id
+          and GL.mb_id is not null
+          AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+          LIMIT 1
+        ), 0 )) as current_worker
+      from work_place_worker WPW
+      WHERE WPW.wpw_out = 0
+      AND WPW.wp_id = #{wpId}
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPW.coop_mb_id = #{coopMbId}
+      </if>
+      AND EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        where SLI.wp_id = WPW.wp_id
+        and SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        LIMIT 1
+      )
+      group by WPW.wp_id, WPW.coop_mb_id
+    ) WPW RIGHT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    INNER JOIN g5_member G5M_COOP ON G5M_COOP.mb_id = WPC.coop_mb_id
+    WHERE WPC.wp_id = #{wpId}
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+    ORDER BY G5M_COOP.mb_name
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  
+  
+  <!--
+  <select id="findAttendantListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    SELECT
+      WPW.wp_id
+      ,WPW.wp_name
+      ,WPW.coop_mb_id
+      ,WPW.coop_mb_name
+      ,WPW.worker_mb_id
+      ,WPW.work_section_b
+      ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPC.work_section_a), '' ) as work_section_name_a
+      ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPW.work_section_b), '' ) as work_section_name_b
+      ,G5M.mb_name AS worker_mb_name
+      ,WP.cc_id
+      ,WP.cc_name
+    FROM (
+      select
+        SLI.wp_id
+        ,SLI.coop_mb_id
+        ,SLI.mb_id
+        ,MIN(sli_in_datetime)
+      from sensor_log_inout SLI
+      where SLI.wp_id = #{wpId}
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND SLI.coop_mb_id = #{coopMbId}
+      </if>
+      AND SLI.si_type = '출입용'
+      and SLI.sli_in_datetime between DATE( NOW() ) and STR_TO_DATE( concat( DATE_FORMAT( NOW(), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+      group by SLI.wp_id, SLI.coop_mb_id, SLI.mb_id
+    ) SLI
+    INNER JOIN work_place_worker WPW ON SLI.wp_id = WPW.wp_id AND SLI.coop_mb_id = WPW.coop_mb_id AND SLI.mb_id = WPW.worker_mb_id
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    ORDER BY WPW.worker_mb_name DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  -->
+
+  <select id="findCurrentAttendantListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    SELECT
+      WPW.wp_id
+      ,WPW.wp_name
+      ,WPW.coop_mb_id
+      ,WPW.coop_mb_name
+      ,WPW.worker_mb_id
+      ,WPW.work_section_b
+      ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPW.work_section_b), '' ) as work_section_name_b
+      ,G5M.mb_name AS worker_mb_name
+      ,WP.cc_id
+      ,WP.cc_name
+      ,GL.measure_time
+    FROM work_place_worker WPW
+    INNER JOIN gps_location GL ON GL.wp_id = WPW.wp_id AND GL.coop_mb_id = WPW.coop_mb_id AND GL.mb_id = WPW.worker_mb_id
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    WHERE WPW.wp_id = #{wpId}
+    and WPW.wpw_out = 0
+    and GL.mb_id is not null
+    AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    AND EXISTS(
+      select 1
+      from sensor_log_inout SLI
+      where SLI.wp_id = WPW.wp_id
+      and SLI.coop_mb_id = WPW.coop_mb_id
+      and SLI.mb_id = WPW.worker_mb_id
+      AND SLI.si_type = '출입용'
+      and SLI.sli_in_datetime between DATE( NOW() ) and STR_TO_DATE( concat( DATE_FORMAT( NOW(), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+      LIMIT 1
+    )
+    ORDER BY WPW.worker_mb_name DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="findCurrentWorkStatus"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.CurrentWorkStatusSummary">
+
+
+    SELECT
+       COUNT(distinct WPW.worker_mb_id) AS total_cnt
+    FROM work_place_worker WPW
+    INNER JOIN gps_location GL ON WPW.worker_mb_id = GL.mb_id AND WPW.coop_mb_id = GL.coop_mb_id AND WPW.wp_id = GL.wp_id
+    WHERE WPW.wp_id = #{wpId}
+    AND WPW.wpw_out = 0
+    and GL.mb_id is not null
+    AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+  </select>
+</mapper>
+

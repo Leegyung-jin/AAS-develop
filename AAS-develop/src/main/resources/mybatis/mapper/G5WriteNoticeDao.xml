@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.G5WriteNoticeDao">
+
+    <!-- 게시판관리 > 근로자공지 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5WriteNoticeDto">
+        SELECT
+            GWN.wr_id
+            ,GWN.mb_id
+            ,GWN.wr_name
+            ,GWN.wr_subject
+            ,GWN.wr_ip
+            ,GWN.wr_file
+            ,GWN.wr_1
+            ,GWN.wr_2
+            ,WP.wp_name as wr_3
+            ,GWN.wr_11 AS all_workplace_worker_notice
+            ,GWN.wr_hit
+            ,GWN.wr_datetime
+            ,CASE WHEN find_in_set( GWN.wr_id, GB.bo_notice  ) THEN '1' ELSE '' END AS wr_notice
+        from g5_write_notice GWN
+        inner join work_place WP ON WP.wp_id = GWN.wr_2
+        , (
+            select bo_notice from g5_board GB where bo_table = 'notice' limit 1
+        ) GB
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                GWN.wr_subject like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWN.wr_content like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWN.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWN.wr_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND GWN.wr_2 = #{wpId}
+        </if>
+        <if test='wrSubject != null and wrSubject != "" '>
+            AND GWN.wr_subject like concat( '%', #{wrSubject} ,'%')
+        </if>
+        <if test='wrContent != null and wrContent != "" '>
+            AND GWN.wr_content like concat( '%', #{wrContent} ,'%')
+        </if>
+        <if test='wrSubjectContent != null and wrSubjectContent != "" '>
+            AND (
+                GWN.wr_subject like concat( '%', #{wrSubjectContent} ,'%')
+                OR
+                GWN.wr_content like concat( '%', #{wrSubjectContent} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND GWN.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='wrName != null and wrName != "" '>
+            AND GWN.wr_name like concat( '%', #{wrName} ,'%')
+        </if>
+        <if test='startDate != null '>
+            AND GWN.wr_datetime >= DATE( #{startDate} )
+        </if>
+        <if test='endDate != null '>
+            AND GWN.wr_datetime <![CDATA[ < ]]> DATE( DATE_ADD( #{endDate}, interval 1 day ))
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+        ORDER BY wr_notice desc, GWN.wr_id DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 게시판관리 > 근로자공지 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        from g5_write_notice GWN
+        inner join work_place WP ON WP.wp_id = GWN.wr_2
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                GWN.wr_subject like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWN.wr_content like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWN.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWN.wr_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND GWN.wr_2 = #{wpId}
+        </if>
+        <if test='wrSubject != null and wrSubject != "" '>
+            AND GWN.wr_subject like concat( '%', #{wrSubject} ,'%')
+        </if>
+        <if test='wrContent != null and wrContent != "" '>
+            AND GWN.wr_content like concat( '%', #{wrContent} ,'%')
+        </if>
+        <if test='wrSubjectContent != null and wrSubjectContent != "" '>
+            AND (
+            GWN.wr_subject like concat( '%', #{wrSubjectContent} ,'%')
+            OR
+            GWN.wr_content like concat( '%', #{wrSubjectContent} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND GWN.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='wrName != null and wrName != "" '>
+            AND GWN.wr_name like concat( '%', #{wrName} ,'%')
+        </if>
+        <if test='startDate != null '>
+            AND GWN.wr_datetime >= DATE( #{startDate} )
+        </if>
+        <if test='endDate != null '>
+            AND GWN.wr_datetime <![CDATA[ < ]]> DATE( DATE_ADD( #{endDate}, interval 1 day ))
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5WriteNoticeDto">
+        SELECT
+            GWN.wr_id
+             ,GWN.mb_id
+             ,GWN.wr_name
+             ,GWN.wr_subject
+             ,GWN.wr_content
+             ,GWN.wr_ip
+             ,GWN.wr_file
+             ,GWN.wr_1
+             ,GWN.wr_2
+             ,GWN.wr_3
+             ,GWN.wr_11 AS all_workplace_worker_notice
+             ,GWN.wr_hit
+             ,GWN.wr_datetime
+             ,CASE WHEN find_in_set( GWN.wr_id, GB.bo_notice  ) THEN '1' ELSE '' END AS wr_notice
+             ,IFNULL((
+                SELECT COUNT(*)
+                FROM g5_board_file GBF
+                where GBF.bo_table = 'notice'
+                AND GBF.wr_id = GWN.wr_id
+             ),0) AS file_count
+        from g5_write_notice GWN, (
+            select bo_notice from g5_board GB where bo_table = 'notice' limit 1
+        ) GB
+        WHERE GWN.wr_id = #{wrId}
+    </select>
+
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteNoticeDto">
+        INSERT INTO g5_write_notice (
+            wr_num
+            ,wr_reply
+            ,wr_parent
+            ,wr_is_comment
+            ,wr_comment
+            ,wr_comment_reply
+            ,ca_name
+            ,wr_option
+            ,wr_subject
+            ,wr_content
+            ,wr_link1
+            ,wr_link2
+            ,wr_link1_hit
+            ,wr_link2_hit
+            ,wr_hit
+            ,wr_good
+            ,wr_nogood
+            ,mb_id
+            ,wr_password
+            ,wr_name
+            ,wr_email
+            ,wr_homepage
+            ,wr_datetime
+            ,wr_file
+            ,wr_last
+            ,wr_ip
+            ,wr_facebook_user
+            ,wr_twitter_user
+            ,wr_1
+            ,wr_2
+            ,wr_3
+            ,wr_4
+            ,wr_5
+            ,wr_6
+            ,wr_7
+            ,wr_8
+            ,wr_9
+            ,wr_10
+            ,wr_11
+            ,wr_12
+            ,wr_13
+            ,wr_14
+            ,wr_15
+            ,wr_16
+            ,wr_17
+            ,wr_18
+            ,wr_19
+            ,wr_20
+        )
+        VALUES (
+            IFNULL( ( SELECT notice_temp.wrNum FROM ( select min(wr_num) - 1 as wrNum from g5_write_notice ) notice_temp limit 1 ), -1 )
+            ,''
+            ,0
+            ,0
+            ,0
+            ,''
+            ,''
+            ,''
+            ,#{wrSubject}
+            ,#{wrContent}
+            ,''
+            ,''
+            ,0
+            ,0
+            ,0
+            ,0
+            ,0
+            ,#{mbId}
+            ,#{wrPassword}
+            ,#{wrName}
+            ,''
+            ,''
+            ,NOW()
+            ,#{wrFile}
+            ,NOW()
+            ,#{wrIp}
+            ,''
+            ,''
+            ,IFNULL( #{wr1,jdbcType=VARCHAR}, '')
+            ,#{wr2}
+            ,#{wr3}
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,IFNULL( #{allWorkplaceWorkerNotice,jdbcType=VARCHAR}, '')
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+        );
+        <selectKey keyProperty="wrId" resultType="java.lang.Integer" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteNoticeDto">
+        UPDATE g5_write_notice
+        SET
+            wr_subject  = #{wrSubject}
+            ,wr_content  = #{wrContent}
+            ,wr_1  = IFNULL( #{wr1,jdbcType=VARCHAR}, '' )
+            ,wr_11  = IFNULL(  #{allWorkplaceWorkerNotice,jdbcType=VARCHAR}, '' )
+        WHERE wr_id = #{wrId}
+    </update>
+
+    <update id="updateParent" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteNoticeDto">
+        UPDATE g5_write_notice
+        SET
+            wr_parent = #{wrParent}
+        WHERE wr_id = #{wrId}
+    </update>
+
+    <update id="updateFileCount" parameterType="int">
+        UPDATE g5_write_notice
+        SET
+            wr_file = IFNULL((
+                select count(*) from g5_board_file GBF where bo_table = 'notice' and wr_id = #{wrId}
+            ), 0)
+        WHERE wr_id = #{wrId}
+    </update>
+
+    <update id="increaseHitCount" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteNoticeDto">
+        UPDATE g5_write_notice
+        SET
+            wr_hit = wr_hit + 1
+        WHERE wr_id = #{wrId}
+    </update>
+
+    <update id="addNoticeFlag" parameterType="int">
+        UPDATE g5_board
+        SET
+            bo_notice  = CASE WHEN find_in_set(#{wrId}, bo_notice) THEN bo_notice ELSE TRIM(BOTH ',' FROM CONCAT( bo_notice, ',', #{wrId} ) ) END
+        WHERE bo_table = 'notice'
+    </update>
+
+    <update id="removeNoticeFlag" parameterType="int">
+        UPDATE g5_board
+        SET
+            bo_notice  = IFNULL( TRIM(BOTH ',' FROM REPLACE(CONCAT(',', bo_notice, ','), CONCAT(',', #{wrId}, ','), ',')), '')
+        WHERE bo_table = 'notice'
+    </update>
+</mapper>

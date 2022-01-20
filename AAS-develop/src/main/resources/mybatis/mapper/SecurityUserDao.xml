@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SecurityUserDao">
+  <select id="loadUserByUsername"
+    parameterType="java.lang.String"
+    resultType="kr.co.hulan.aas.config.security.oauth.model.SecurityUser">
+    SELECT
+        G5M.mb_no
+        ,G5M.mb_id
+        ,G5M.mb_password
+        ,G5M.mb_level
+        ,G5M.pwd_change_date
+        ,G5M.attempt_login_count
+        ,WP.wp_id
+        ,WP.wp_name
+        ,CC.cc_id
+        ,CC.cc_name
+        ,OO.office_no as login_office_no
+        ,OO.office_name as login_office_name
+        ,CC2.cc_id as login_cc_id
+        ,CC2.cc_name as login_cc_name
+    FROM g5_member G5M
+        LEFT JOIN con_company CC ON CC.cc_id = G5M.mb_12
+        LEFT JOIN con_company CC2 ON CC2.cc_id = G5M.cc_id AND G5M.mb_level in (4,5)
+        LEFT JOIN ordering_office OO ON OO.office_no = G5M.office_no AND G5M.mb_level in (6,7)
+        LEFT JOIN construction_site_manager CSM ON CSM.mb_id = G5M.mb_id AND CSM.cc_id = G5M.cc_id AND G5M.mb_level = 4
+        LEFT JOIN work_place WP ON WP.wp_id = CSM.wp_id
+    WHERE G5M.mb_level > 2
+    AND ( G5M.mb_id = #{id} or replace(G5M.mb_id, '-', '') = #{id} or replace(G5M.mb_tel, '-', '') = #{id} )
+    LIMIT 1
+  </select>
+
+  <select id="getDetailSecurityUser"
+    parameterType="java.lang.String"
+    resultType="kr.co.hulan.aas.config.security.oauth.model.SecurityMemberResponse">
+    SELECT
+      G5M.mb_no
+    , G5M.mb_id
+    , G5M.mb_name
+    , G5M.mb_level
+    , G5M.mb_datetime AS regist_date
+    , G5M.mb_today_login AS latest_login
+    , G5M.pwd_change_date
+    , CC.cc_id
+    , CC.cc_name
+    , WP.wp_id
+    , WP.wp_name
+    , CASE WHEN G5M.mb_level = 3 THEN G5M.mb_id ELSE NULL END AS coop_mb_id
+    , CASE WHEN G5M.mb_level = 3 THEN G5M.mb_name ELSE NULL END AS coop_mb_name
+    , IFNULL(WPMC.support_gps, 0) as use_gps_monitor
+    , IFNULL(WPMC.support_ble, 0) as use_ble_monitor
+    ,CC2.cc_id as login_cc_id
+    ,CC2.cc_name as login_cc_name
+    ,OO.office_no as login_office_no
+    ,OO.office_name as login_office_name
+    FROM g5_member G5M
+    LEFT JOIN con_company CC ON CC.cc_id = G5M.mb_12
+    LEFT JOIN con_company CC2 ON CC2.cc_id = G5M.cc_id AND G5M.mb_level in (4,5)
+    LEFT JOIN ordering_office OO ON OO.office_no = G5M.office_no AND G5M.mb_level in (6,7)
+    LEFT JOIN construction_site_manager CSM ON CSM.mb_id = G5M.mb_id AND CSM.cc_id = G5M.cc_id AND G5M.mb_level = 4
+    LEFT JOIN work_place WP ON WP.wp_id = CSM.wp_id
+    LEFT JOIN work_place_monitor_config WPMC on WPMC.wp_id = CSM.wp_id
+    WHERE G5M.mb_id = #{id}
+    LIMIT 1
+  </select>
+</mapper>

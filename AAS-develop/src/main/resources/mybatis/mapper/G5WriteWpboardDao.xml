@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.G5WriteWpboardDao">
+
+    <!-- 게시판관리 > 현장게시판 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5WriteWpboardDto">
+        SELECT
+            GWW.wr_id
+            ,GWW.wr_num
+            ,GWW.wr_reply
+            ,GWW.wr_parent
+            ,GWW.wr_is_comment
+            ,GWW.wr_comment
+            ,GWW.wr_comment_reply
+            ,GWW.ca_name
+            ,GWW.wr_option
+            ,GWW.wr_subject
+            ,GWW.wr_content
+            ,GWW.wr_link1
+            ,GWW.wr_link2
+            ,GWW.wr_link1_hit
+            ,GWW.wr_link2_hit
+            ,GWW.wr_hit
+            ,GWW.wr_good
+            ,GWW.wr_nogood
+            ,GWW.mb_id
+            ,GWW.wr_password
+            ,GWW.wr_name
+            ,GWW.wr_email
+            ,GWW.wr_homepage
+            ,GWW.wr_datetime
+            ,GWW.wr_file
+            ,GWW.wr_last
+            ,GWW.wr_ip
+            ,GWW.wr_facebook_user
+            ,GWW.wr_twitter_user
+            ,GWW.wr_1
+            ,GWW.wr_2
+            ,GWW.wr_3
+            ,GWW.wr_4
+            ,GWW.wr_5
+            ,GWW.wr_6
+            ,GWW.wr_7
+            ,GWW.wr_8
+            ,GWW.wr_9
+            ,GWW.wr_10
+            ,GWW.wr_11
+            ,GWW.wr_12
+            ,GWW.wr_13
+            ,GWW.wr_14
+            ,GWW.wr_15
+            ,GWW.wr_16
+            ,GWW.wr_17
+            ,GWW.wr_18
+            ,GWW.wr_19
+            ,GWW.wr_20
+        from g5_write_wpboard GWW
+        inner join work_place WP ON WP.wp_id = GWW.wr_2
+        inner join work_place_coop WPC ON WPC.wp_id = GWW.wr_2 AND WPC.coop_mb_id = GWW.wr_4
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                GWW.wr_subject like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWW.wr_content like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWW.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWW.wr_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND GWW.wr_2 = #{wpId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND GWW.wr_4 = #{coopMbId}
+        </if>
+        <if test='caName != null and caName != "" '>
+            AND GWW.ca_name = #{caName}
+        </if>
+        <if test='wrSubject != null and wrSubject != "" '>
+            AND GWW.wr_subject like concat( '%', #{wrSubject} ,'%')
+        </if>
+        <if test='wrContent != null and wrContent != "" '>
+            AND GWW.wr_content like concat( '%', #{wrContent} ,'%')
+        </if>
+        <if test='wrSubjectContent != null and wrSubjectContent != "" '>
+            AND (
+                GWW.wr_subject like concat( '%', #{wrSubjectContent} ,'%')
+                OR
+                GWW.wr_content like concat( '%', #{wrSubjectContent} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND GWW.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='wrName != null and wrName != "" '>
+            AND GWW.wr_name like concat( '%', #{wrName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+        ORDER BY GWW.wr_id DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 게시판관리 > 현장게시판 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        from g5_write_wpboard GWW
+        inner join work_place WP ON WP.wp_id = GWW.wr_2
+        inner join work_place_coop WPC ON WPC.wp_id = GWW.wr_2 AND WPC.coop_mb_id = GWW.wr_4
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                GWW.wr_subject like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWW.wr_content like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWW.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                GWW.wr_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND GWW.wr_2 = #{wpId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND GWW.wr_4 = #{coopMbId}
+        </if>
+        <if test='caName != null and caName != "" '>
+            AND GWW.ca_name = #{caName}
+        </if>
+        <if test='wrSubject != null and wrSubject != "" '>
+            AND GWW.wr_subject like concat( '%', #{wrSubject} ,'%')
+        </if>
+        <if test='wrContent != null and wrContent != "" '>
+            AND GWW.wr_content like concat( '%', #{wrContent} ,'%')
+        </if>
+        <if test='wrSubjectContent != null and wrSubjectContent != "" '>
+            AND (
+            GWW.wr_subject like concat( '%', #{wrSubjectContent} ,'%')
+            OR
+            GWW.wr_content like concat( '%', #{wrSubjectContent} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND GWW.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='wrName != null and wrName != "" '>
+            AND GWW.wr_name like concat( '%', #{wrName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5WriteWpboardDto">
+        SELECT
+            GWW.wr_id
+            ,GWW.wr_num
+            ,GWW.wr_reply
+            ,GWW.wr_parent
+            ,GWW.wr_is_comment
+            ,GWW.wr_comment
+            ,GWW.wr_comment_reply
+            ,GWW.ca_name
+            ,GWW.wr_option
+            ,GWW.wr_subject
+            ,GWW.wr_content
+            ,GWW.wr_link1
+            ,GWW.wr_link2
+            ,GWW.wr_link1_hit
+            ,GWW.wr_link2_hit
+            ,GWW.wr_hit
+            ,GWW.wr_good
+            ,GWW.wr_nogood
+            ,GWW.mb_id
+            ,GWW.wr_password
+            ,GWW.wr_name
+            ,GWW.wr_email
+            ,GWW.wr_homepage
+            ,GWW.wr_datetime
+            ,GWW.wr_file
+            ,GWW.wr_last
+            ,GWW.wr_ip
+            ,GWW.wr_facebook_user
+            ,GWW.wr_twitter_user
+            ,GWW.wr_1
+            ,GWW.wr_2
+            ,GWW.wr_3
+            ,GWW.wr_4
+            ,GWW.wr_5
+            ,GWW.wr_6
+            ,GWW.wr_7
+            ,GWW.wr_8
+            ,GWW.wr_9
+            ,GWW.wr_10
+            ,GWW.wr_11
+            ,GWW.wr_12
+            ,GWW.wr_13
+            ,GWW.wr_14
+            ,GWW.wr_15
+            ,GWW.wr_16
+            ,GWW.wr_17
+            ,GWW.wr_18
+            ,GWW.wr_19
+            ,GWW.wr_20
+        from g5_write_wpboard GWW
+        WHERE GWW.wr_id = #{wrId}
+    </select>
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteWpboardDto">
+        INSERT INTO g5_write_wpboard (
+            wr_num
+            ,wr_reply
+            ,wr_parent
+            ,wr_is_comment
+            ,wr_comment
+            ,wr_comment_reply
+            ,ca_name
+            ,wr_option
+            ,wr_subject
+            ,wr_content
+            ,wr_link1
+            ,wr_link2
+            ,wr_link1_hit
+            ,wr_link2_hit
+            ,wr_hit
+            ,wr_good
+            ,wr_nogood
+            ,mb_id
+            ,wr_password
+            ,wr_name
+            ,wr_email
+            ,wr_homepage
+            ,wr_datetime
+            ,wr_file
+            ,wr_last
+            ,wr_ip
+            ,wr_facebook_user
+            ,wr_twitter_user
+            ,wr_1
+            ,wr_2
+            ,wr_3
+            ,wr_4
+            ,wr_5
+            ,wr_6
+            ,wr_7
+            ,wr_8
+            ,wr_9
+            ,wr_10
+            ,wr_11
+            ,wr_12
+            ,wr_13
+            ,wr_14
+            ,wr_15
+            ,wr_16
+            ,wr_17
+            ,wr_18
+            ,wr_19
+            ,wr_20
+        )
+        VALUES (
+            IFNULL( ( SELECT notice_temp.wrNum FROM ( select min(wr_num) - 1 as wrNum from g5_write_wpboard ) notice_temp limit 1 ), -1 )
+            ,''
+            ,0
+            ,0
+            ,0
+            ,''
+            ,#{caName}
+            ,''
+            ,#{wrSubject}
+            ,#{wrContent}
+            ,''
+            ,''
+            ,0
+            ,0
+            ,0
+            ,0
+            ,0
+            ,#{mbId}
+            ,#{wrPassword}
+            ,#{wrName}
+            ,''
+            ,''
+            ,NOW()
+            ,0
+            ,NOW()
+            ,#{wrIp}
+            ,''
+            ,''
+            ,''
+            ,#{wr2}
+            ,#{wr3}
+            ,#{wr4}
+            ,#{wr5}
+            ,#{wr6}
+            ,''
+            ,''
+            ,#{wr9}
+            ,''
+            ,''
+            ,'0000-00-00 00:00:00'
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+            ,''
+        );
+        <selectKey keyProperty="wrId" resultType="java.lang.Integer" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteWpboardDto">
+        UPDATE g5_write_wpboard
+        SET
+            ca_name = IFNULL( #{caName}, '' )
+            ,wr_subject  = #{wrSubject}
+            ,wr_content  = #{wrContent}
+        WHERE wr_id = #{wrId}
+    </update>
+
+    <update id="updateParent" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteWpboardDto">
+        UPDATE g5_write_wpboard
+        SET
+            wr_parent = #{wrParent}
+        WHERE wr_id = #{wrId}
+    </update>
+
+
+    <update id="updateAction" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteWpboardDto">
+        UPDATE g5_write_wpboard
+        SET
+            wr_11  = IFNULL( #{wr11,jdbcType=VARCHAR}, '' )
+            ,wr_12  = NOW()
+            <if test='wr6 != null and wr6 != "" '>
+                ,wr_6  = #{wr6,jdbcType=VARCHAR}
+            </if>
+        WHERE wr_id = #{wrId}
+    </update>
+
+    <update id="updateFileCount" parameterType="int">
+        UPDATE g5_write_wpboard
+        SET
+            wr_file = IFNULL((
+                 select count(*) from g5_board_file GBF where bo_table = 'wpboard' and wr_id = #{wrId}
+             ), 0)
+        WHERE wr_id = #{wrId}
+    </update>
+
+    <update id="increaseHitCount" parameterType="kr.co.hulan.aas.mvc.model.dto.G5WriteWpboardDto">
+        UPDATE g5_write_wpboard
+        SET
+            wr_hit = wr_hit + 1
+        WHERE wr_id = #{wrId}
+    </update>
+</mapper>

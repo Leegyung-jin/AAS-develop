@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao">
+  
+  <!--  ************************************************************************
+   HICC 지원 현장
+   <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+     <property name="alias" value="WP"/>
+     <property name="aliasMonitor" value="WPMC"/>
+   </include>
+   ************************************************************************  -->
+  <sql id="WhereSupport">
+    (
+      ${alias}.wp_end_status = 0
+      AND ${alias}.wp_start_date IS NOT NULL
+      AND ${alias}.wp_start_date <![CDATA[<=]]> DATE(NOW())
+      AND EXISTS(
+        select 1
+        from work_place_monitor_config WPMC_SU
+        where WPMC_SU.wp_id = ${alias}.wp_id
+        and ( WPMC_SU.support_ble = 1 OR WPMC_SU.support_gps = 1 OR WPMC_SU.support_3d = 1 )
+      )
+    )
+  </sql>
+  
+  <!-- 통합관제 기본 정보 가져오기 -->
+  <select id="findHiccInfoByLoginUser"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.HiccInfoDto">
+    SELECT
+      HI.hicc_no,
+      HI.hicc_name,
+      HI.map_file_name,
+      HI.map_file_name_org,
+      HI.map_file_path,
+      HI.map_file_location,
+      HI.icon_file_name,
+      HI.icon_file_name_org,
+      HI.icon_file_path,
+      HI.icon_file_location,
+      HI.bg_img_file_name,
+      HI.bg_img_file_name_org,
+      HI.bg_img_file_path,
+      HI.bg_img_file_location,
+      HI.bg_color,
+      HI.create_date,
+      HI.creator,
+      HI.update_date,
+      HI.updater
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          FROM hicc_info HI
+          WHERE HI.hicc_no = 1
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          FROM g5_member GM7
+          INNER JOIN ordering_office OO ON OO.office_no = GM7.office_no
+          INNER JOIN hicc_info HI ON HI.hicc_no = OO.hicc_no
+          where GM7.mb_id = #{ loginUserId }
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          FROM g5_member GM5
+          INNER JOIN con_company CC ON CC.cc_id = GM5.cc_id
+          INNER JOIN hicc_info HI ON HI.hicc_no = CC.hicc_no
+          where GM5.mb_id = #{ loginUserId }
+        </when>
+        <otherwise>
+          FROM hicc_info HI
+          WHERE 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </select>
+  
+  <!-- 통합관제 기본 정보 가져오기 -->
+  <select id="findHiccInfo"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.HiccInfoDto">
+    SELECT
+      HI.hicc_no,
+      HI.hicc_name,
+      HI.map_file_name,
+      HI.map_file_name_org,
+      HI.map_file_path,
+      HI.map_file_location,
+      HI.icon_file_name,
+      HI.icon_file_name_org,
+      HI.icon_file_path,
+      HI.icon_file_location,
+      HI.bg_img_file_name,
+      HI.bg_img_file_name_org,
+      HI.bg_img_file_path,
+      HI.bg_img_file_location,
+      HI.bg_color,
+      HI.create_date,
+      HI.creator,
+      HI.update_date,
+      HI.updater
+    FROM hicc_info HI
+    WHERE HI.hicc_no = #{ hiccNo }
+  </select>
+  
+  
+  <!-- 통합관제 기본 정보 가져오기 -->
+  <select id="HiccIntegGroupStatList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.main.HiccIntegGroupVo">
+    select
+      HIG.hrg_no,
+      HIG.hrg_name,
+      HIG.hicc_no,
+      HIG.order_seq,
+      IFNULL((
+        SELECT
+        count( distinct WPC.coop_mb_id )
+        from work_place_coop WPC
+        inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+        inner join work_place WP ON WPC.wp_id = WP.wp_id
+        inner join work_place_address WPA on WP.wp_id = WPA.wp_id
+        inner join hicc_region HIR ON WPA.sigungu_code like concat( HIR.sido_cd, '%')
+        where 'x' = 'x'
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+        AND HIG.hrg_no = HIR.hrg_no
+      ), 0) as total_coop_count
+    from hicc_info HICC
+    inner join hicc_integ_group HIG on HICC.hicc_no = HIG.hicc_no
+    where HICC.hicc_no = #{ hiccNo }
+    order by HIG.order_seq
+  </select>
+  
+  <!-- 통합관제 메인 버튼 정보 가져오기 -->
+  <select id="findHiccMainButtonList"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.HiccMainBtnDto">
+    SELECT
+      HMB.hbtn_no,
+      HMB.hicc_no,
+      HMB.hbtn_name,
+      HMB.hbtn_link_url,
+      HMB.create_date,
+      HMB.creator,
+      HMB.update_date,
+      HMB.updater
+    FROM hicc_main_btn HMB
+    WHERE HMB.hicc_no = #{ hiccNo }
+  </select>
+  
+  
+</mapper>

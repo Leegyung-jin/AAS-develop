@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.AdminMsgInfoDao">
+
+  <!-- 현장 관리자 알림 메세지 리스트 정보 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.AdminMsgInfoDto">
+    SELECT
+      AMI.idx
+      ,AMI.mb_id
+      ,AMI.wp_id
+      ,AMI.coop_mb_id
+      ,AMI.msg_type
+      ,AMI.subject
+      ,AMI.msg
+      ,AMI.is_send
+      ,AMI.upt_datetime
+    FROM admin_msg_info AMI
+      INNER JOIN work_place WP ON WP.wp_id = AMI.wp_id
+      INNER JOIN g5_member G5M ON G5M.mb_id = AMI.mb_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        AMI.msg like concat( '%', #{COMPLEX} ,'%')
+        OR
+        AMI.subject like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='subject != null and subject != "" '>
+      AND AMI.subject like concat( '%', #{subject} ,'%')
+    </if>
+    <if test='msg != null and msg != "" '>
+      AND AMI.msg like concat( '%', #{msg} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND AMI.wp_id = #{wpId}
+    </if>
+    <if test='msgType != null '>
+      AND AMI.msg_type = #{msgType}
+    </if>
+    <if test='startDate != null '>
+      AND AMI.upt_datetime >= DATE( #{startDate} )
+    </if>
+    <if test='endDate != null '>
+      AND AMI.upt_datetime <![CDATA[ < ]]> DATE( DATE_ADD( #{endDate}, interval 1 day ))
+    </if>
+    ORDER BY AMI.upt_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 현장별 GPS 정책  -->
+  <select id="findListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM admin_msg_info AMI
+    INNER JOIN work_place WP ON WP.wp_id = AMI.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = AMI.mb_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        AMI.msg like concat( '%', #{COMPLEX} ,'%')
+        OR
+        AMI.subject like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='subject != null and subject != "" '>
+      AND AMI.subject like concat( '%', #{subject} ,'%')
+    </if>
+    <if test='msg != null and msg != "" '>
+      AND AMI.msg like concat( '%', #{msg} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND AMI.wp_id = #{wpId}
+    </if>
+    <if test='msgType != null '>
+      AND AMI.msg_type = #{msgType}
+    </if>
+    <if test='startDate != null '>
+      AND AMI.upt_datetime >= DATE( #{startDate} )
+    </if>
+    <if test='endDate != null '>
+      AND AMI.upt_datetime <![CDATA[ < ]]> DATE( DATE_ADD( #{endDate}, interval 1 day ))
+    </if>
+  </select>
+
+  <select id="findById"
+    parameterType="int"
+    resultType="kr.co.hulan.aas.mvc.model.dto.AdminMsgInfoDto">
+    SELECT
+      AMI.idx
+      ,AMI.mb_id
+      ,AMI.wp_id
+      ,AMI.coop_mb_id
+      ,AMI.msg_type
+      ,AMI.subject
+      ,AMI.msg
+      ,AMI.is_send
+      ,AMI.upt_datetime
+    FROM admin_msg_info AMI
+      INNER JOIN work_place WP ON WP.wp_id = AMI.wp_id
+      INNER JOIN g5_member G5M ON G5M.mb_id = AMI.mb_id
+    WHERE AMI.idx = #{idx}
+  </select>
+  
+  
+  <!-- 통홥 관제 최근 알림 메세지 리스트 -->
+  <select id="findRecentList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.AdminMsgInfoDto">
+    SELECT
+      AMI.idx
+      ,AMI.mb_id
+      ,AMI.wp_id
+      ,AMI.coop_mb_id
+      ,AMI.msg_type
+      ,AMI.subject
+      ,AMI.msg
+      ,AMI.is_send
+      ,AMI.upt_datetime
+      ,WP.wp_name
+      ,AMT.alarm_grade
+    FROM admin_msg_info AMI
+    INNER JOIN admin_msg_type AMT ON AMT.msg_type = AMI.msg_type
+    INNER JOIN work_place WP ON WP.wp_id = AMI.wp_id
+    WHERE 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        AMI.msg like concat( '%', #{COMPLEX} ,'%')
+        OR
+        AMI.subject like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='subject != null and subject != "" '>
+      AND AMI.subject like concat( '%', #{subject} ,'%')
+    </if>
+    <if test='msg != null and msg != "" '>
+      AND AMI.msg like concat( '%', #{msg} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND AMI.wp_id = #{wpId}
+    </if>
+    <if test='msgType != null '>
+      AND AMI.msg_type = #{msgType}
+    </if>
+    <if test='alarmGrade != null '>
+      AND AMT.alarm_grade = #{alarmGrade}
+    </if>
+    <if test=' alarmGrades != null '>
+      AND AMT.alarm_grade IN
+        <foreach collection="alarmGrades" item="item" index="index" separator="," open="(" close=")">
+          #{item}
+        </foreach>
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY AMI.upt_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+
+</mapper>
+

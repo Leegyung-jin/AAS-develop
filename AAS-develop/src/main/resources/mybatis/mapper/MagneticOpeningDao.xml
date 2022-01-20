@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.MagneticOpeningDao">
+  
+  <select id="findCurrentState"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.controller.response.ImosMagneticOpeningStateResponse">
+    SELECT
+      count( WDI.mac_address ) as total_cnt,
+      sum( case when MOR.status = 1 then 1 else 0 end ) as open_cnt
+    FROM work_device_info WDI
+           INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+           INNER JOIN magnetic_open_recent MOR ON MOR.mac_address = WDI.mac_address
+    WHERE 'x' = 'x'
+      AND WDI.wp_id = #{wpId}
+      AND WDI.device_type = 7
+  </select>
+  
+  <select id="findDeviceStateList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosMagneticOpeningStateVo">
+    SELECT
+      WDI.idx
+      ,WDI.device_id
+      ,WDI.wp_id
+      ,WP.wp_name
+      ,WDI.mac_address as mac_address
+      ,MOR.mac_address as tmac_address
+      ,MOR.measure_time
+      ,IFNULL( MOR.display_name, WDI.device_id ) as display_name
+      ,MOR.status
+      ,MOR.measure_time
+      ,IFNULL( MOR.dashboard_popup, 0 ) as dashboard_popup
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    INNER JOIN magnetic_open_recent MOR ON MOR.mac_address = WDI.mac_address
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='macAddress != null and macAddress != "" '>
+      AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+    </if>
+    <if test='deviceId != null and deviceId != "" '>
+      AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+    </if>
+    <if test='status != null '>
+      AND MOR.status = #{status}
+    </if>
+    AND WDI.wp_id = #{wpId}
+    AND WDI.device_type = 7
+    ORDER BY WDI.update_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="countDeviceStateList"
+    parameterType="map"
+    resultType="int">
+    SELECT
+      count(*) as cnt
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    INNER JOIN magnetic_open_recent MOR ON MOR.mac_address = WDI.mac_address
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='macAddress != null and macAddress != "" '>
+      AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+    </if>
+    <if test='deviceId != null and deviceId != "" '>
+      AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+    </if>
+    <if test='status != null and '>
+      AND MOR.status = #{status}
+    </if>
+    AND WDI.wp_id = #{wpId}
+    AND WDI.device_type = 7
+  </select>
+  
+</mapper>

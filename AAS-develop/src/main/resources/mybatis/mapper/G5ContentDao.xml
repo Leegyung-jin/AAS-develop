@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.G5ContentDao">
+
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5ContentDto">
+        SELECT
+            1
+        from g5_content GC
+        WHERE 'x' = 'x'
+        ORDER BY GC.co_id DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        from g5_content GC
+        WHERE 'x' = 'x'
+    </select>
+
+    <select id="findById"
+            parameterType="string"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5ContentDto">
+        SELECT
+            1
+        from g5_content GC
+        WHERE GC.co_id = #{coId}
+    </select>
+
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.G5ContentDto">
+        INSERT INTO g5_content (
+            co_html
+        )
+        VALUES (
+            #{coHtml}
+        );
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.G5ContentDto">
+        UPDATE g5_content
+        SET
+            co_html  = #{coHtml}
+        WHERE co_id = #{coId}
+    </update>
+</mapper>

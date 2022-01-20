@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorInfoDao">
+
+    <!-- 센서관리 > 개별센서 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorInfoDto">
+        SELECT
+            SI.si_idx
+            ,SI.wp_id
+            ,WP.wp_name
+            ,SI.sd_idx
+            ,IFNULL( SD.sd_name , SI.sd_name ) as sd_name
+            ,SI.si_code
+            ,SI.si_type
+            ,SI.si_place1
+            ,SI.si_place2
+            ,SI.si_push
+            ,SI.si_datetime
+            ,SI.major
+            ,SI.minor
+            ,MCC.cc_id
+            ,MCC.cc_name
+            ,SBL.building_no
+            ,SBL.floor
+            ,BD.building_name
+            ,BDF.floor_name
+        FROM sensor_info SI
+            INNER JOIN work_place WP ON WP.wp_id = SI.wp_id
+            INNER JOIN con_company MCC ON MCC.cc_id = WP.cc_id
+            LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+            LEFT JOIN sensor_building_location SBL ON SBL.si_idx = SI.si_idx
+            LEFT JOIN building BD ON BD.building_no = SBL.building_no
+            LEFT JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.si_code like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.sd_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.si_place1 like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.si_place2 like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+                SELECT 1
+                FROM construction_site CS
+                WHERE CS.wp_id = WP.wp_id
+                AND CS.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='sdIdx != null and sdIdx != "" '>
+            AND SI.sd_idx = #{sdIdx}
+        </if>
+        <if test='siType != null and siType != "" '>
+            AND SI.si_type = #{siType}
+        </if>
+        <if test='siCode != null and siCode != "" '>
+            AND SI.si_code like concat( '%', #{siCode} ,'%')
+        </if>
+        <if test='sdName != null and sdName != "" '>
+            AND SI.sd_name like concat( '%', #{sdName} ,'%')
+        </if>
+        <if test='siPlace1 != null and siPlace1 != "" '>
+            AND SI.si_place1 like concat( '%', #{siPlace1} ,'%')
+        </if>
+        <if test='siPlace2 != null and siPlace2 != "" '>
+            AND SI.si_place2 like concat( '%', #{siPlace2} ,'%')
+        </if>
+        <if test='isRegisterLocation != null '>
+            <choose>
+                <when test='isRegisterLocation == 0 '>
+                    AND SBL.si_idx IS NULL
+                </when>
+                <when test='isRegisterLocation == 1 '>
+                    AND SBL.si_idx IS NOT NULL
+                </when>
+            </choose>
+        </if>
+        
+        ORDER BY si_idx DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 센서관리 > 개별센서 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM sensor_info SI
+        INNER JOIN work_place WP ON WP.wp_id = SI.wp_id
+        INNER JOIN con_company MCC ON MCC.cc_id = WP.cc_id
+        LEFT JOIN sensor_building_location SBL ON SBL.si_idx = SI.si_idx
+        LEFT JOIN building BD ON BD.building_no = SBL.building_no
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.si_code like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.sd_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.si_place1 like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SI.si_place2 like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+                SELECT 1
+                FROM construction_site CS
+                WHERE CS.wp_id = WP.wp_id
+                AND CS.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='sdIdx != null '>
+            AND SI.sd_idx = #{sdIdx}
+        </if>
+        <if test='siType != null and siType != "" '>
+            AND SI.si_type = #{siType}
+        </if>
+        <if test='siCode != null and siCode != "" '>
+            AND SI.si_code like concat( '%', #{siCode} ,'%')
+        </if>
+        <if test='sdName != null and sdName != "" '>
+            AND SI.sd_name like concat( '%', #{sdName} ,'%')
+        </if>
+        <if test='siPlace1 != null and siPlace1 != "" '>
+            AND SI.si_place1 like concat( '%', #{siPlace1} ,'%')
+        </if>
+        <if test='siPlace2 != null and siPlace2 != "" '>
+            AND SI.si_place2 like concat( '%', #{siPlace2} ,'%')
+        </if>
+        <if test='isRegisterLocation != null '>
+            <choose>
+                <when test='isRegisterLocation == 0 '>
+                    AND SBL.si_idx IS NULL
+                </when>
+                <when test='isRegisterLocation == 1 '>
+                    AND SBL.si_idx IS NOT NULL
+                </when>
+            </choose>
+        </if>
+    </select>
+
+
+    <!-- 센서관리 > 유형별센서-->
+    <select id="findSensorSituationListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorInfoDto">
+        select
+            WP.wp_id
+            ,WP.wp_name
+            ,MCC.cc_id
+            ,MCC.cc_name
+            ,SIT.si_type
+            ,IFNULL((
+                select count(*)
+                from sensor_info SI
+                where SI.wp_id = WP.wp_id
+                and SI.si_type = SIT.si_type
+                <if test='sdIdx != null '>
+                    AND SI.sd_idx = #{sdIdx}
+                </if>
+            ), 0) AS sensor_count
+        from work_place WP
+        inner join con_company MCC ON MCC.cc_id = WP.cc_id
+        , (
+            <choose>
+                <when test='siType != null and siType != "" '>
+                    select #{siType} AS si_type
+                </when>
+                <otherwise>
+                    SELECT
+                        si_type
+                    FROM sensor_policy_info SPI
+                    where wp_id is null and si_type != 'default'
+                </otherwise>
+            </choose>
+        ) SIT
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+                SELECT 1
+                FROM construction_site CS
+                WHERE CS.wp_id = WP.wp_id
+                AND CS.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+        ORDER BY WP.wp_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 센서관리 > 유형별센서-->
+    <select id="findSensorSituationListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        from work_place WP
+        inner join con_company MCC ON MCC.cc_id = WP.cc_id
+        , (
+            <choose>
+                <when test='siType != null and siType != "" '>
+                    select #{siType}
+                </when>
+                <otherwise>
+                    SELECT
+                        si_type
+                    FROM sensor_policy_info SPI
+                    where wp_id is null and si_type != 'default'
+                </otherwise>
+            </choose>
+        ) SIT
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+            WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+                SELECT 1
+                FROM construction_site CS
+                WHERE CS.wp_id = WP.wp_id
+                AND CS.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorInfoDto">
+        SELECT
+            SI.si_idx
+             ,SI.wp_id
+             ,SI.wp_name
+             ,SI.sd_idx
+             ,IFNULL( SD.sd_name, SI.sd_name ) AS sd_name
+             ,SI.si_code
+             ,SI.si_type
+             ,SI.si_place1
+             ,SI.si_place2
+             ,SI.si_push
+             ,SI.si_datetime
+             ,SI.major
+             ,SI.minor
+             ,WP.cc_id
+             ,WP.cc_name
+             ,BDF.building_no
+             ,BDF.floor
+             ,BD.building_name
+        FROM sensor_info SI
+        INNER JOIN work_place WP ON WP.wp_id = SI.wp_id
+        LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+        LEFT JOIN sensor_building_location SBL ON SBL.si_idx = SI.si_idx
+        LEFT JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+        LEFT JOIN building BD ON BDF.building_no = BD.building_no
+        WHERE SI.si_idx = #{siIdx}
+    </select>
+
+
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorInfoDto">
+        INSERT INTO sensor_info (
+            wp_id
+            ,wp_name
+            ,sd_idx
+            ,sd_name
+            ,si_code
+            ,si_type
+            ,si_place1
+            ,si_place2
+            ,si_push
+            ,si_datetime
+            ,major
+            ,minor
+        )
+        VALUES (
+            #{wpId}
+            , #{wpName}
+            , #{sdIdx}
+            , #{sdName}
+            , #{siCode}
+            , #{siType}
+            , #{siPlace1}
+            , #{siPlace2}
+            , #{siPush}
+            , NOW()
+            , #{major}
+            , #{minor}
+        );
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorInfoDto">
+        UPDATE sensor_info
+        SET
+            sd_idx = #{sdIdx}
+            ,sd_name = #{sdName}
+            ,si_code = #{siCode}
+            ,si_type = #{siType}
+            ,si_place1 = #{siPlace1}
+            ,si_place2 = #{siPlace2}
+            ,si_push = #{siPush}
+            ,major = #{major}
+            ,minor = #{minor}
+        WHERE si_idx = #{siIdx}
+    </update>
+</mapper>
+

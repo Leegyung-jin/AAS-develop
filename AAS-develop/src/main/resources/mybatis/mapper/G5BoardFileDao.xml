@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.G5BoardFileDao">
+
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5BoardFileDto">
+        SELECT
+            GBF.bo_table
+            ,GBF.wr_id
+            ,GBF.bf_no
+            ,GBF.bf_source
+            ,GBF.bf_file
+            ,GBF.bf_download
+            ,GBF.bf_content
+            ,GBF.bf_filesize
+            ,GBF.bf_width
+            ,GBF.bf_height
+            ,GBF.bf_type
+            ,GBF.bf_datetime
+        from g5_board_file GBF
+        WHERE 'x' = 'x'
+        <if test='boTable != null and boTable != "" '>
+            AND GBF.bo_table = #{boTable}
+        </if>
+        <if test='wrId != null '>
+            AND GBF.wr_id = #{wrId}
+        </if>
+        ORDER BY GBF.bo_table, GBF.wr_id, GBF.bf_no ASC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        from g5_board_file GBF
+        WHERE 'x' = 'x'
+        <if test='boTable != null and boTable != "" '>
+            AND GBF.bo_table = #{boTable}
+        </if>
+        <if test='wrId != null '>
+            AND GBF.wr_id = #{wrId}
+        </if>
+    </select>
+
+    <select id="findByKey"
+            parameterType="kr.co.hulan.aas.mvc.model.dto.G5BoardFileDto"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5BoardFileDto">
+        SELECT
+            GBF.bo_table
+             ,GBF.wr_id
+             ,GBF.bf_no
+             ,GBF.bf_source
+             ,GBF.bf_file
+             ,GBF.bf_download
+             ,GBF.bf_content
+             ,GBF.bf_filesize
+             ,GBF.bf_width
+             ,GBF.bf_height
+             ,GBF.bf_type
+             ,GBF.bf_datetime
+        from g5_board_file GBF
+        WHERE GBF.bo_table = #{boTable}
+        AND GBF.wr_id = #{wrId}
+        AND GBF.bf_no = #{bfNo}
+    </select>
+
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.G5BoardFileDto">
+        INSERT INTO g5_board_file (
+            bo_table
+            ,wr_id
+            ,bf_no
+            ,bf_source
+            ,bf_file
+            ,bf_download
+            ,bf_content
+            ,bf_filesize
+            ,bf_width
+            ,bf_height
+            ,bf_type
+            ,bf_datetime
+        )
+        VALUES (
+            #{boTable}
+            ,#{wrId}
+            ,#{bfNo}
+            ,#{bfSource}
+            ,#{bfFile}
+            ,#{bfDownload}
+            ,#{bfContent}
+            ,#{bfFilesize}
+            ,#{bfWidth}
+            ,#{bfHeight}
+            ,#{bfType}
+            ,NOW()
+       )
+       ON DUPLICATE KEY UPDATE
+            <choose>
+                <when test=' bfSource != null and bfSource != "" '>
+                    bf_source = #{bfSource}
+                    ,bf_file = #{bfFile}
+                    ,bf_download = #{bfDownload}
+                    ,bf_content = #{bfContent}
+                    ,bf_filesize = #{bfFilesize}
+                    ,bf_width = #{bfWidth}
+                    ,bf_height = #{bfHeight}
+                    ,bf_type = #{bfType}
+                    ,bf_datetime = NOW()
+                </when>
+                <otherwise>
+                    bf_datetime = bf_datetime
+                </otherwise>
+            </choose>
+    </insert>
+
+    <delete id="delete" parameterType="kr.co.hulan.aas.mvc.model.dto.G5BoardFileDto">
+        DELETE FROM g5_board_file
+        WHERE bo_table = #{boTable}
+          AND wr_id = #{wrId}
+          AND bf_no = #{bfNo}
+    </delete>
+
+    <!--
+    <delete id="deleteBlank" parameterType="map">
+        DELETE FROM g5_board_file GBF, (
+            SELECT MAX(GBF2.bf_no) AS MAX_BF_NO
+            FROM g5_board_file GBF2
+            WHERE GBF2.bo_table = #{boTable}
+            AND GBF2.wr_id = #{wrId}
+            AND GBF2.bf_file IS NOT NULL
+            AND GBF2.bf_file != ''
+        ) GBF_COMP
+        WHERE GBF.bo_table = #{boTable}
+          AND GBF.wr_id = #{wrId}
+          AND GBF.bf_no > GBF_COMP.MAX_BF_NO
+    </delete>
+    -->
+
+    <delete id="deleteBlank" parameterType="map">
+        DELETE FROM g5_board_file
+        WHERE bo_table = #{boTable}
+          AND wr_id = #{wrId}
+          AND ( bf_file IS NULL OR bf_file = '' )
+    </delete>
+
+
+
+
+</mapper>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.UiComponentDao">
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.UiComponentDto">
+    SELECT
+      UC.cmpt_id,
+      UC.cmpt_name,
+      UC.description,
+      UC.status,
+      UC.create_date,
+      UC.creator,
+      UC.update_date,
+      UC.updater
+    FROM ui_component UC
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        UC.cmpt_id like concat('%', #{COMPLEX} ,'%')
+        OR
+        UC.cmpt_name like concat('%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='cmptId != null and cmptId != "" '>
+      AND UC.cmpt_id like concat('%', #{cmptId} ,'%')
+    </if>
+    <if test='cmptName != null and cmptName != "" '>
+      AND UC.cmpt_name like concat('%', #{cmptName} ,'%')
+    </if>
+    <if test='status != null '>
+      AND UC.status = #{status}
+    </if>
+    ORDER BY UC.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="findListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM ui_component UC
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        UC.cmpt_id like concat('%', #{COMPLEX} ,'%')
+        OR
+        UC.cmpt_name like concat('%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='cmptId != null and cmptId != "" '>
+      AND UC.cmpt_id like concat('%', #{cmptId} ,'%')
+    </if>
+    <if test='cmptName != null and cmptName != "" '>
+      AND UC.cmpt_name like concat('%', #{cmptName} ,'%')
+    </if>
+    <if test='status != null '>
+      AND UC.status = #{status}
+    </if>
+  </select>
+  
+  
+  <select id="findById"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.UiComponentDto">
+    SELECT
+      UC.cmpt_id,
+      UC.cmpt_name,
+      UC.description,
+      UC.file_name,
+      UC.file_name_org,
+      UC.file_path,
+      UC.file_location,
+      UC.status,
+      UC.create_date,
+      UC.creator,
+      UC.update_date,
+      UC.updater
+    FROM ui_component UC
+    WHERE UC.cmpt_id = #{cmptId}
+  </select>
+
+</mapper>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao">
+
+
+  <!--  ************************************************************************
+    로그인 사용자별 현장 지원 여부 데이터 조건절
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+      <property name="aliasDeviceStatus" value="WDS"/>
+    </include>
+    ************************************************************************  -->
+  <sql id="WhereDeviceActive">
+    (
+      ${aliasDeviceStatus}.upt_datetime IS NOT NULL
+      AND ${aliasDeviceStatus}.upt_datetime > date_sub( NOW(), interval 22 minute )
+      AND ${aliasDeviceStatus}.ble_check = 1
+      AND ${aliasDeviceStatus}.loc_check = 1
+    )
+  </sql>
+
+</mapper>

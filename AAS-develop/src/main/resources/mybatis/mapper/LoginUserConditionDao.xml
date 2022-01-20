@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao">
+  
+  <!--  ************************************************************************
+  로그인 사용자별 현장 지원 여부 데이터 조건절
+  <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+    <property name="aliasWorkplace" value="WP"/>
+  </include>
+  ************************************************************************  -->
+  <sql id="WhereSupportWorkplace">
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          AND 'x' = 'x'
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          AND EXISTS(
+            select 1
+            from g5_member GM7
+            where GM7.office_no = ${aliasWorkplace}.office_no
+            and GM7.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 6 ">
+          <!--
+          AND EXISTS(
+            select 1
+            from office_workplace_manager OWM6
+            inner join office_workplace_grp OWG6 ON OWG6.wp_grp_no = OWM6.wp_grp_no
+            inner join g5_member GM6 ON GM6.office_no = OWG6.office_no
+            where OWM6.wp_grp_no = ${aliasWorkplace}.wp_grp_no
+            and OWM6.mb_id = #{ loginUserId }
+            limit 1
+          )
+          -->
+          AND 'x' = 'y'
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          AND EXISTS(
+            SELECT 1
+            FROM construction_site CS
+            WHERE CS.wp_id = ${aliasWorkplace}.wp_id
+            AND CS.cc_id = #{loginCcId}
+            LIMIT 1
+          )
+        </when>
+        <when test=" loginUserLevel == 4 ">
+          AND EXISTS(
+            select 1
+            from construction_site_manager CSM4
+            where CSM4.wp_id = ${aliasWorkplace}.wp_id
+            and CSM4.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 3 ">
+          AND EXISTS(
+            select 1
+            from work_place_coop WPC3
+            where WPC3.wp_id = ${aliasWorkplace}.wp_id
+            and WPC3.coop_mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <otherwise>
+          AND 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </sql>
+  
+  
+  <!-- ************************************************************************
+    로그인 사용자별 건설사 지원 여부 데이터 조건절
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionCompany">
+      <property name="aliasConstructionCompany" value="CC"/>
+    </include>
+  ************************************************************************
+  -->
+  
+  <sql id="WhereSupportConstructionCompany">
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          AND 'x' = 'x'
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          AND EXISTS(
+            select 1
+            from work_place WP7
+            inner join construction_site CS7 ON CS7.wp_id = WP7.wp_id
+            where WP7.office_no = #{ loginOfficeNo }
+            and CS7.cc_id = ${aliasConstructionCompany}.cc_id
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 6 ">
+          AND 'x' = 'y'
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          AND ${aliasConstructionCompany}.cc_id = #{ loginCcId }
+        </when>
+        <when test=" loginUserLevel == 4 ">
+          AND EXISTS(
+            select 1
+            from construction_site_manager CSM4
+            where CSM4.cc_id = ${aliasConstructionCompany}.cc_id
+            and CSM4.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 3 ">
+          AND EXISTS(
+            select 1
+            from work_place_coop WPC3
+            where WPC3.cc_id = ${aliasConstructionCompany}.cc_id
+            and WPC3.coop_mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <otherwise>
+          AND 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </sql>
+  
+  <!-- ************************************************************************
+    로그인 사용자별 건설현장 지원 여부 데이터 조건절
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionSite">
+      <property name="aliasWorkplace" value="WP"/>
+      <property name="aliasConstructionSite" value="CS"/>
+    </include>
+  ************************************************************************
+  -->
+  
+  <sql id="WhereSupportConstructionSite">
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          AND 'x' = 'x'
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          AND ${aliasWorkplace}.office_no = #{ loginOfficeNo }
+        </when>
+        <when test=" loginUserLevel == 6 ">
+          AND 'x' = 'y'
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          AND ${aliasConstructionSite}.cc_id = #{ loginCcId }
+        </when>
+        <when test=" loginUserLevel == 4 ">
+          AND EXISTS(
+            select 1
+            from construction_site_manager CSM4
+            where CSM4.cc_id = ${aliasConstructionSite}.cc_id
+            AND CSM4.wp_id = ${aliasConstructionSite}.wp_id
+            and CSM4.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 3 ">
+          AND EXISTS(
+            select 1
+            from work_place_coop WPC3
+            where WPC3.cc_id = ${aliasConstructionSite}.cc_id
+            AND WPC3.wp_id = ${aliasConstructionSite}.wp_id
+            and WPC3.coop_mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <otherwise>
+          AND 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </sql>
+  
+  
+  <!-- ************************************************************************
+    로그인 사용자별 협력사 지원 여부 데이터 조건절.
+    * aliasCoop 은 wp_id 와 coop_mb_id 필드가 있는 테이블
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoop">
+      <property name="aliasWorkplace" value="WP"/>
+      <property name="aliasConstructionSite" value="CS"/>
+      <property name="aliasCoop" value="WPC"/>
+    </include>
+  ************************************************************************    -->
+  <!--
+  <sql id="WhereSupportCoop">
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          AND 'x' = 'x'
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          AND EXISTS(
+            select 1
+            from g5_member GM7
+            inner join office_workplace_grp OWG7 ON OWG7.office_no = GM7.office_no
+            where OWG7.wp_grp_no = ${aliasWorkplace}.wp_grp_no
+            and GM7.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 6 ">
+          AND EXISTS(
+            select 1
+            from office_workplace_manager OWM6
+            inner join office_workplace_grp OWG6 ON OWG6.wp_grp_no = OWM6.wp_grp_no
+            inner join g5_member GM6 ON GM6.office_no = OWG6.office_no
+            where OWM6.wp_grp_no = ${aliasWorkplace}.wp_grp_no
+            and OWM6.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          AND EXISTS(
+            select 1
+            from g5_member GM5
+            where GM5.mb_id = #{ loginUserId }
+            and GM5.cc_id = ${aliasConstructionSite}.cc_id
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 4 ">
+          AND EXISTS(
+            select 1
+            from construction_site_manager CSM4
+            where CSM4.cc_id = ${aliasConstructionSite}.cc_id
+            AND CSM4.wp_id = ${aliasConstructionSite}.wp_id
+            and CSM4.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 3 ">
+          AND ${aliasCoop}.coop_mb_id = #{ loginUserId }
+        </when>
+        <otherwise>
+          AND 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </sql>
+  -->
+  
+  <!-- ************************************************************************
+    로그인 사용자별 협력사 지원 여부 데이터 조건절.
+    * aliasWp 는 wp_id 를 가진 테이블
+    * aliasWpAndCoop 는 wp_id, coop_mb_id 를 가진 테이블 ( cc_id 없음 )
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPW"/>
+    </include>
+  ************************************************************************ -->
+  <!--
+  <sql id="WhereSupportCoopByWpAndCoop">
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          AND 'x' = 'x'
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          AND EXISTS(
+            select 1
+            from work_place WP7
+            inner join office_workplace_grp OWG7 ON OWG7.wp_grp_no = WP7.wp_grp_no
+            inner join g5_member GM7 ON GM7.office_no = OWG7.office_no
+            where WP7.wp_id = ${aliasWp}.wp_id
+            and GM7.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 6 ">
+          AND EXISTS(
+            select 1
+            from work_place WP6
+            inner join office_workplace_manager OWM6 ON OWM6.wp_grp_no = WP6.wp_grp_no
+            inner join g5_member GM6 ON GM6.mb_id = OWM6.mb_id
+            where WP6.wp_id = ${aliasWp}.wp_id
+            and GM6.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          AND EXISTS(
+            select 1
+            from work_place_coop WPC5
+            inner join construction_site CS5 ON CS5.wp_id = WPC5.wp_id AND CS5.cc_id = WPC5.cc_id
+            inner join g5_member GM5 on GM5.cc_id = CS5.cc_id
+            where WPC5.wp_id = ${aliasWpAndCoop}.wp_id
+            AND WPC5.coop_mb_id = ${aliasWpAndCoop}.coop_mb_id
+            and GM5.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 4 ">
+          AND EXISTS(
+            select 1
+            from work_place_coop WPC4
+            inner join construction_site_manager CSM4 ON WPC4.wp_id = CSM4.wp_id AND WPC4.cc_id = CSM4.cc_id
+            where WPC4.wp_id = ${aliasWpAndCoop}.wp_id
+            and WPC4.coop_mb_id = ${aliasWpAndCoop}.coop_mb_id
+            and CSM4.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 3 ">
+          AND ${aliasWpAndCoop}.coop_mb_id = #{ loginUserId }
+        </when>
+        <otherwise>
+          AND 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </sql>
+  -->
+  
+  <!-- ************************************************************************
+    로그인 사용자별 협력사 지원 여부 데이터 조건절.
+    * aliasWp 는 wp_id 를 가진 테이블
+    * aliasWpAndCoopAndCc 는 wp_id, coop_mb_id, cc_id 를 가진 테이블
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+  ************************************************************************    -->
+  
+
+  <sql id="WhereSupportCoopByWpAndCoop">
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          AND 'x' = 'x'
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          AND ${aliasWp}.office_no = #{ loginOfficeNo }
+        </when>
+        <when test=" loginUserLevel == 6 ">
+          AND 'x' = 'y'
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          AND ${aliasWpAndCoop}.cc_id = #{ loginCcId }
+        </when>
+        <when test=" loginUserLevel == 4 ">
+          AND EXISTS(
+            select 1
+            from construction_site_manager CSM4
+            where CSM4.wp_id = ${aliasWpAndCoop}.wp_id
+            and CSM4.cc_id = ${aliasWpAndCoop}.cc_id
+            and CSM4.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 3 ">
+          AND ${aliasWpAndCoop}.coop_mb_id = #{ loginUserId }
+        </when>
+        <otherwise>
+          AND 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </sql>
+  
+  <!-- ************************************************************************
+    로그인 사용자별 근로자 지원 여부 데이터 조건절.  ( 현장모니터링시 조감도/단면도/평면도 현장근로자 표시시  현장관리자 및 협력사 관리자는 본인 소속 건설사 근로자 모두 볼 수 있다 )
+    * aliasWp 는 wp_id 를 가진 테이블
+    * aliasWpAndCoopAndCc 는 wp_id, coop_mb_id, cc_id 를 가진 테이블
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+  ************************************************************************    -->
+  <sql id="WhereSupportWorkplaceByConCompany">
+    <if test='loginUserLevel != null and loginUserId != null and loginUserId != "" '>
+      <choose>
+        <when test=" loginUserLevel == 10  ">
+          AND 'x' = 'x'
+        </when>
+        <when test=" loginUserLevel == 7 ">
+          AND ${aliasWp}.office_no = #{ loginOfficeNo }
+        </when>
+        <when test=" loginUserLevel == 6 ">
+          AND 'x' = 'y'
+        </when>
+        <when test=" loginUserLevel == 5 ">
+          AND ${aliasWpAndCoop}.cc_id = #{ loginCcId }
+        </when>
+        <when test=" loginUserLevel == 4 ">
+          AND EXISTS(
+            select 1
+            from construction_site_manager CSM4
+            where CSM4.wp_id = ${aliasWpAndCoop}.wp_id
+            and CSM4.cc_id = ${aliasWpAndCoop}.cc_id
+            and CSM4.mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <when test=" loginUserLevel == 3 ">
+          AND EXISTS(
+            select 1
+            from work_place_coop WPC3
+            where WPC3.wp_id = ${aliasWpAndCoop}.wp_id
+            and WPC3.cc_id = ${aliasWpAndCoop}.cc_id
+            and WPC3.coop_mb_id = #{ loginUserId }
+            limit 1
+          )
+        </when>
+        <otherwise>
+          AND 'x' = 'y'
+        </otherwise>
+      </choose>
+    </if>
+  </sql>
+
+
+</mapper>

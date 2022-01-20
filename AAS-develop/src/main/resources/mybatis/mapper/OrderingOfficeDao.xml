@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.OrderingOfficeDao">
+  
+  <resultMap id="orderingOfficeDetailResultMap" type="kr.co.hulan.aas.mvc.api.orderoffice.vo.OrderingOfficeVo" autoMapping="true">
+    <id property="officeNo" column="office_no"/>
+    <collection property="groupList"
+      ofType="kr.co.hulan.aas.mvc.api.orderoffice.vo.OfficeWorkplaceGroupVo"
+      column="office_no"
+      select="findOfficeWorkplaceGroupListByOfficeNo"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  
+  <!-- 발주사 목록 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.orderoffice.vo.OrderingOfficeListVo">
+    SELECT
+      OROF.office_no
+      ,OROF.office_name
+      ,OROF.telephone
+      ,OROF.biznum
+      ,OROF.zonecode
+      ,OROF.bcode
+      ,OROF.address
+      ,OROF.address_detail
+      ,OROF.sido
+      ,OROF.sigungu
+      ,OROF.bname
+      ,IFNULL((
+        select count(WP.wp_id)
+        from work_place WP
+        where WP.office_no = OROF.office_no
+      ), 0) as workplace_count
+      ,OROF.create_date
+      ,OROF.creator
+      ,OROF.update_date
+      ,OROF.updater
+    FROM ordering_office OROF
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+          OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+          OR
+          OROF.telephone like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='officeName != null and officeName != "" '>
+      AND OROF.office_name like concat( '%', #{officeName} ,'%')
+    </if>
+    <if test='telephone != null and telephone != "" '>
+      AND OROF.telephone like concat( '%', #{telephone} ,'%')
+    </if>
+    ORDER BY OROF.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 발주사 목록 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM ordering_office OROF
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      OROF.telephone like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='officeName != null and officeName != "" '>
+      AND OROF.office_name like concat( '%', #{officeName} ,'%')
+    </if>
+    <if test='telephone != null and telephone != "" '>
+      AND OROF.telephone like concat( '%', #{telephone} ,'%')
+    </if>
+  </select>
+  
+  <!-- 발주사 상세 -->
+  <select id="findInfo"
+    parameterType="long"
+    resultMap="orderingOfficeDetailResultMap">
+    SELECT
+      OROF.office_no
+      ,OROF.office_name
+      ,OROF.telephone
+      ,OROF.biznum
+      ,OROF.zonecode
+      ,OROF.bcode
+      ,OROF.address
+      ,OROF.address_detail
+      ,OROF.sido
+      ,OROF.sigungu
+      ,OROF.bname
+      ,HI.hicc_no
+      ,HI.hicc_name
+      ,HI.icon_file_location
+      ,HI.icon_file_name
+      ,HI.icon_file_name_org
+      ,HI.icon_file_path
+      ,HI.bg_img_file_location
+      ,HI.bg_img_file_name
+      ,HI.bg_img_file_name_org
+      ,HI.bg_img_file_path
+      ,HI.bg_color
+      ,OROF.create_date
+      ,OROF.creator
+      ,OROF.update_date
+      ,OROF.updater
+    FROM ordering_office OROF
+    LEFT JOIN hicc_info HI ON HI.hicc_no = OROF.hicc_no
+    WHERE OROF.office_no = #{officeNo}
+  </select>
+  
+  <!-- 발주사 현장 그릅 리스트 -->
+  <select id="findOfficeWorkplaceGroupListByOfficeNo"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.api.orderoffice.vo.OfficeWorkplaceGroupVo">
+    SELECT
+      OFWG.wp_grp_no
+      ,OFWG.office_no
+      ,OROF.office_name
+      ,OFWG.office_grp_name
+      ,IFNULL((
+        select count(WP.wp_id)
+        from work_place WP
+        where WP.office_no = OFWG.office_no
+      ), 0) as workplace_count
+      ,OFWG.create_date
+      ,OFWG.creator
+      ,OFWG.update_date
+      ,OFWG.updater
+    FROM office_workplace_grp OFWG
+    INNER JOIN ordering_office OROF ON OROF.office_no = OFWG.office_no
+    WHERE OFWG.office_no = #{officeNo}
+  </select>
+  
+</mapper>

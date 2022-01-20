@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorLogTraceDao">
+
+    <!--
+        위치관리 > 위험지역기록
+        위치관리 > 위치세부기록
+    -->
+    <select id="findListByCondition"
+            parameterType="map"
+            fetchSize="100000"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogTraceDto">
+        SELECT
+            SLT.slt_idx
+            ,SLT.sd_idx
+            ,SLT.sd_name
+            ,SLT.si_code
+            ,SLT.si_type
+            ,SLT.si_place1
+            ,SLT.si_place2
+            ,SLT.wp_id
+            ,IFNULL( WP.wp_name, SLT.wp_name) AS wp_name
+            ,SLT.cc_id
+            ,IFNULL( CC.cc_name , SLT.cc_name) AS cc_name
+            ,SLT.wpw_id
+            ,SLT.coop_mb_id
+            ,IFNULL( G5MCOOP.mb_name, SLT.coop_mb_name) AS coop_mb_name
+            ,WPC.work_section_a
+            ,IFNULL((
+                SELECT WS.section_name
+                FROM work_section WS
+                where WS.section_cd = WPC.work_section_a
+            ), WPC.wpc_work ) AS work_section_name_a
+            ,WPW.work_section_b
+            ,(
+                SELECT WS.section_name
+                FROM work_section WS
+                where WS.section_cd = WPW.work_section_b
+            ) AS work_section_name_b
+            ,SLT.mb_id
+            ,IFNULL( G5MWORK.mb_name, SLT.mb_name) AS mb_name
+            ,SLT.slt_in_sd_idx
+            ,SLT.slt_in_sd_name
+            ,SLT.slt_in_si_code
+            ,SLT.slt_in_si_type
+            ,SLT.slt_in_datetime
+            ,SLT.slt_out_sd_idx
+            ,SLT.slt_out_sd_name
+            ,SLT.slt_out_si_code
+            ,SLT.slt_out_si_type
+            ,SLT.slt_out_datetime
+            ,SLT.slt_datetime
+        FROM sensor_log_trace SLT
+          LEFT JOIN work_place WP ON WP.wp_id = SLT.wp_id
+          LEFT JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = SLT.coop_mb_id
+          LEFT JOIN g5_member G5MWORK ON G5MWORK.mb_id = SLT.mb_id
+          LEFT JOIN work_place_coop WPC ON WPC.wp_id = SLT.wp_id AND WPC.coop_mb_id = SLT.coop_mb_id
+          LEFT JOIN work_place_worker WPW ON WPW.wp_id = SLT.wp_id AND WPW.coop_mb_id = SLT.coop_mb_id AND WPW.worker_mb_id = SLT.mb_id
+          LEFT JOIN con_company CC ON CC.cc_id = WPC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                SLT.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5MWORK.mb_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='siType != null and siType != "" '>
+            AND SLT.si_type = #{siType}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND G5MCOOP.mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND SLT.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5MWORK.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='sdIdx != null '>
+            AND SLT.sd_idx = #{sdIdx}
+        </if>
+        <if test='siPlace1 != null and siPlace1 != "" '>
+            AND SLT.si_place1 like concat( '%', #{siPlace1} ,'%')
+        </if>
+        <if test='siPlace2 != null and siPlace2 != "" '>
+            AND SLT.si_place2 like concat( '%', #{siPlace2} ,'%')
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND SLT.slt_in_datetime between #{startDate} and #{endDate}
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+        ORDER BY SLT.slt_in_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!--
+        위치관리 > 위험지역기록
+        위치관리 > 위치세부기록
+    -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM sensor_log_trace SLT
+        LEFT JOIN work_place WP ON WP.wp_id = SLT.wp_id
+        LEFT JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = SLT.coop_mb_id
+        LEFT JOIN g5_member G5MWORK ON G5MWORK.mb_id = SLT.mb_id
+        LEFT JOIN work_place_coop WPC ON WPC.wp_id = SLT.wp_id AND WPC.coop_mb_id = SLT.coop_mb_id
+        LEFT JOIN work_place_worker WPW ON WPW.wp_id = SLT.wp_id AND WPW.coop_mb_id = SLT.coop_mb_id AND WPW.worker_mb_id = SLT.mb_id
+        LEFT JOIN con_company CC ON CC.cc_id = WPC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+            CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            SLT.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5MWORK.mb_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='siType != null and siType != "" '>
+            AND SLT.si_type = #{siType}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND G5MCOOP.mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND SLT.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5MWORK.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='sdIdx != null '>
+            AND SLT.sd_idx = #{sdIdx}
+        </if>
+        <if test='siPlace1 != null and siPlace1 != "" '>
+            AND SLT.si_place1 like concat( '%', #{siPlace1} ,'%')
+        </if>
+        <if test='siPlace2 != null and siPlace2 != "" '>
+            AND SLT.si_place2 like concat( '%', #{siPlace2} ,'%')
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND SLT.slt_in_datetime between #{startDate} and #{endDate}
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+    </select>
+
+
+
+    <select id="findWorkerSafetySensorLogListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogTraceDto">
+        SELECT
+            slt_idx
+            ,sd_idx
+            ,sd_name
+            ,si_code
+            ,si_type
+            ,si_place1
+            ,si_place2
+            ,wp_id
+            ,wp_name
+            ,cc_id
+            ,cc_name
+            ,wpw_id
+            ,coop_mb_id
+            ,coop_mb_name
+            ,mb_id
+            ,mb_name
+            ,slt_in_sd_idx
+            ,slt_in_sd_name
+            ,slt_in_si_code
+            ,slt_in_si_type
+            ,slt_in_datetime
+            ,slt_out_sd_idx
+            ,slt_out_sd_name
+            ,slt_out_si_code
+            ,slt_out_si_type
+            ,slt_out_datetime
+            ,slt_datetime
+        FROM sensor_log_trace SLT
+        WHERE 'x' = 'x'
+        <if test='mbId != null and mbId != "" '>
+            AND mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND cc_id = #{ccId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND coop_mb_id = #{coopMbId}
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND slt_in_datetime between #{startDate} and #{endDate}
+        </if>
+        ORDER BY slt_in_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findWorkerSafetySensorLogListCountByCondition"
+            parameterType="map"
+            resultType="long">
+
+        SELECT
+        COUNT(*) AS CNT
+        FROM sensor_log_trace SLT
+        WHERE 'x' = 'x'
+        <if test='mbId != null and mbId != "" '>
+            AND mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND cc_id = #{ccId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND coop_mb_id = #{coopMbId}
+        </if>
+        <if test='startDate != null and endDate != null  '>
+            AND slt_in_datetime between #{startDate} and #{endDate}
+        </if>
+    </select>
+
+
+
+
+    <select id="findByIdList"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogTraceDto">
+        SELECT
+            SLT.mb_id
+            ,SLT.wp_id
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_20 AS device_id
+            ,G5M.app_version
+        FROM (
+            SELECT
+                SLT.mb_id
+                ,SLT.wp_id
+            FROM sensor_log_trace SLT
+            WHERE SLT.slt_idx IN <foreach collection="sltIdxs" item="sltIdx" index="index" separator="," open="(" close=")">#{sltIdx}</foreach>
+            group by SLT.mb_id, SLT.wp_id
+        ) SLT INNER JOIN g5_member G5M ON G5M.mb_id = SLT.mb_id
+    </select>
+
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogTraceDto">
+        SELECT
+            SLT.slt_idx
+             ,SLT.sd_idx
+             ,SLT.sd_name
+             ,SLT.si_code
+             ,SLT.si_type
+             ,SLT.si_place1
+             ,SLT.si_place2
+             ,SLT.wp_id
+             ,SLT.wp_name
+             ,SLT.cc_id
+             ,SLT.cc_name
+             ,SLT.wpw_id
+             ,SLT.coop_mb_id
+             ,SLT.coop_mb_name
+             ,SLT.mb_id
+             ,SLT.mb_name
+             ,SLT.slt_in_sd_idx
+             ,SLT.slt_in_sd_name
+             ,SLT.slt_in_si_code
+             ,SLT.slt_in_si_type
+             ,SLT.slt_in_datetime
+             ,SLT.slt_out_sd_idx
+             ,SLT.slt_out_sd_name
+             ,SLT.slt_out_si_code
+             ,SLT.slt_out_si_type
+             ,SLT.slt_out_datetime
+             ,SLT.slt_datetime
+             ,G5M.mb_18 AS push_normal
+             ,G5M.mb_19 AS push_danger
+             ,G5M.mb_20 AS device_id
+        FROM sensor_log_trace SLT
+                 INNER JOIN g5_member G5M ON G5M.mb_id = SLT.mb_id
+        WHERE SLT.slt_idx = #{sltIdx}
+    </select>
+
+</mapper>

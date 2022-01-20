@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.HulanUiComponentDao">
+  
+  <resultMap id="hulanUiComponentDetailMap" type="kr.co.hulan.aas.mvc.api.component.vo.HulanUiComponentDetailVo" autoMapping="true">
+    <id property="hcmptId" column="hcmpt_id"/>
+    <collection property="selectableMbLevelList"
+      ofType="kr.co.hulan.aas.mvc.api.component.vo.HulanUiComponentLevelSelectVo"
+      autoMapping="true"
+      column="hcmpt_id"
+      select="findSelectableLevelListByHcmptId"
+    />
+  </resultMap>
+  
+  <!-- 신규 UiComponent 목록 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.component.vo.HulanUiComponentVo">
+    SELECT
+      HUC.hcmpt_id
+      ,HUC.hcmpt_name
+      ,HUC.description
+      ,HUC.site_type
+      ,HUC.ui_type
+      ,HUC.width
+      ,HUC.height
+      ,HUC.file_name
+      ,HUC.file_name_org
+      ,HUC.file_path
+      ,HUC.file_location
+      ,HUC.status
+      ,HUC.create_date
+      ,HUC.creator
+      ,HUC.update_date
+      ,HUC.updater
+    FROM hulan_ui_component HUC
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        HUC.hcmpt_id like concat( '%', #{COMPLEX} ,'%')
+        OR
+        HUC.hcmpt_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='hcmptId != null and hcmptId != "" '>
+      AND HUC.hcmpt_id like concat( '%', #{hcmptId} ,'%')
+    </if>
+    <if test='hcmptName != null and hcmptName != "" '>
+      AND HUC.hcmpt_name like concat( '%', #{hcmptName} ,'%')
+    </if>
+    <if test='siteType != null '>
+      AND HUC.site_type = #{siteType}
+    </if>
+    <if test='uiType != null '>
+      AND HUC.ui_type = #{uiType}
+    </if>
+    <if test='status != null '>
+      AND HUC.status = #{status}
+    </if>
+    <if test='supportedLevel != null '>
+      AND EXISTS(
+          select 1
+          from hulan_ui_component_level HUCL
+          WHERE HUCL.hcmpt_id = HUC.hcmpt_id
+          AND HUCL.mb_level = #{supportedLevel}
+          LIMIT 1
+      )
+    </if>
+    ORDER BY HUC.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 신규 UiComponent 목록 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM hulan_ui_component HUC
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        HUC.hcmpt_id like concat( '%', #{COMPLEX} ,'%')
+        OR
+        HUC.hcmpt_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='hcmptId != null and hcmptId != "" '>
+      AND HUC.hcmpt_id like concat( '%', #{hcmptId} ,'%')
+    </if>
+    <if test='hcmptName != null and hcmptName != "" '>
+      AND HUC.hcmpt_name like concat( '%', #{hcmptName} ,'%')
+    </if>
+    <if test='siteType != null '>
+      AND HUC.site_type = #{siteType}
+    </if>
+    <if test='uiType != null '>
+      AND HUC.ui_type = #{uiType}
+    </if>
+    <if test='status != null '>
+      AND HUC.status = #{status}
+    </if>
+    <if test='supportedLevel != null '>
+      AND EXISTS(
+        select 1
+        from hulan_ui_component_level HUCL
+        WHERE HUCL.hcmpt_id = HUC.hcmpt_id
+        AND HUCL.mb_level = #{supportedLevel}
+        LIMIT 1
+      )
+    </if>
+  </select>
+  
+  <!-- 신규 UiComponent 상세 -->
+  <select id="findInfo"
+    parameterType="string"
+    resultMap="hulanUiComponentDetailMap">
+    SELECT
+      HUC.hcmpt_id
+     ,HUC.hcmpt_name
+     ,HUC.description
+     ,HUC.site_type
+     ,HUC.ui_type
+     ,HUC.width
+     ,HUC.height
+     ,HUC.file_name
+     ,HUC.file_name_org
+     ,HUC.file_path
+     ,HUC.file_location
+     ,HUC.status
+     ,HUC.create_date
+     ,HUC.creator
+     ,HUC.update_date
+     ,HUC.updater
+    FROM hulan_ui_component HUC
+    WHERE HUC.hcmpt_id = #{hcmptId}
+  </select>
+  
+  <!-- IMOS 사용자가 배치한 UiComponent 목록 -->
+  <select id="findImosMemberComponentListByMember"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosMemberUiComponentVo">
+    SELECT
+      HMUC.imuc_no
+         ,HMUC.wp_id
+         ,HMUC.mb_id
+         ,HMUC.deploy_page
+         ,HMUC.pos_x
+         ,HMUC.pos_y
+         ,HMUC.custom_data
+         ,HUC.hcmpt_id
+         ,HUC.hcmpt_name
+         ,HUC.description
+         ,HUC.ui_type
+         ,HUC.width
+         ,HUC.height
+    FROM imos_member_ui_component HMUC
+           INNER JOIN hulan_ui_component HUC ON HUC.hcmpt_id = HMUC.hcmpt_id
+    WHERE HMUC.wp_id = #{wpId}
+      AND HMUC.mb_id = #{mbId}
+      AND HMUC.deploy_page = #{deployPage}
+    ORDER BY HUC.create_date DESC
+  </select>
+  
+  <!-- IMOS 사용자가 배치한 UiComponent 상세 -->
+  <select id="findImosMemberComponentInfoById"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosMemberUiComponentVo">
+    SELECT
+      HMUC.imuc_no
+         ,HMUC.wp_id
+         ,HMUC.mb_id
+         ,HMUC.deploy_page
+         ,HMUC.pos_x
+         ,HMUC.pos_y
+         ,HMUC.custom_data
+         ,HUC.hcmpt_id
+         ,HUC.hcmpt_name
+         ,HUC.description
+         ,HUC.ui_type
+         ,HUC.width
+         ,HUC.height
+    FROM imos_member_ui_component HMUC
+           INNER JOIN hulan_ui_component HUC ON HUC.hcmpt_id = HMUC.hcmpt_id
+    WHERE HMUC.imuc_no = #{imucNo}
+  </select>
+  
+  <!-- IMOS 사용자가 배치한 UiComponent 상세 -->
+  <select id="findImosMemberComponentInfo"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosMemberUiComponentVo">
+    SELECT
+      HMUC.imuc_no
+         ,HMUC.wp_id
+         ,HMUC.mb_id
+         ,HMUC.deploy_page
+         ,HMUC.pos_x
+         ,HMUC.pos_y
+         ,HMUC.custom_data
+         ,HUC.hcmpt_id
+         ,HUC.hcmpt_name
+         ,HUC.description
+         ,HUC.ui_type
+         ,HUC.width
+         ,HUC.height
+    FROM imos_member_ui_component HMUC
+           INNER JOIN hulan_ui_component HUC ON HUC.hcmpt_id = HMUC.hcmpt_id
+    WHERE HMUC.wp_id = #{wpId}
+      AND HMUC.mb_id = #{mbId}
+      AND HMUC.deploy_page = #{deployPage}
+      AND HMUC.pos_x = #{posX}
+      AND HMUC.pos_y = #{posY}
+  </select>
+  
+  
+  <!-- 통합관제 사용자가 배치한 UiComponent 목록 -->
+  <select id="findHiccMemberComponentListByMember"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.HiccMemberUiComponentVo">
+    SELECT
+      HMUC.hmuc_no
+         ,HMUC.mb_id
+         ,HMUC.deploy_page
+         ,HMUC.pos_x
+         ,HMUC.pos_y
+         ,HMUC.custom_data
+         ,HUC.hcmpt_id
+         ,HUC.hcmpt_name
+         ,HUC.description
+         ,HUC.ui_type
+         ,HUC.width
+         ,HUC.height
+    FROM hicc_member_ui_component HMUC
+           INNER JOIN hulan_ui_component HUC ON HUC.hcmpt_id = HMUC.hcmpt_id
+    WHERE HMUC.deploy_page = #{deployPage}
+      AND HMUC.mb_id = #{mbId}
+    ORDER BY HUC.create_date DESC
+  </select>
+  
+  <!-- 통합관제 사용자가 배치한 UiComponent 상세 -->
+  <select id="findHiccMemberComponentInfoById"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.HiccMemberUiComponentVo">
+    SELECT
+      HMUC.hmuc_no
+         ,HMUC.mb_id
+         ,HMUC.deploy_page
+         ,HMUC.pos_x
+         ,HMUC.pos_y
+         ,HMUC.custom_data
+         ,HUC.hcmpt_id
+         ,HUC.hcmpt_name
+         ,HUC.description
+         ,HUC.ui_type
+         ,HUC.width
+         ,HUC.height
+    FROM hicc_member_ui_component HMUC
+           INNER JOIN hulan_ui_component HUC ON HUC.hcmpt_id = HMUC.hcmpt_id
+    WHERE HMUC.hmuc_no = #{hmucNo}
+  </select>
+  
+  <!-- 통합관제 사용자가 배치한 UiComponent 상세 -->
+  <select id="findHiccMemberComponentInfo"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.HiccMemberUiComponentVo">
+    SELECT
+      HMUC.hmuc_no
+         ,HMUC.mb_id
+         ,HMUC.deploy_page
+         ,HMUC.pos_x
+         ,HMUC.pos_y
+         ,HMUC.custom_data
+         ,HUC.hcmpt_id
+         ,HUC.hcmpt_name
+         ,HUC.description
+         ,HUC.ui_type
+         ,HUC.width
+         ,HUC.height
+    FROM hicc_member_ui_component HMUC
+           INNER JOIN hulan_ui_component HUC ON HUC.hcmpt_id = HMUC.hcmpt_id
+    WHERE HMUC.mb_id = #{mbId}
+      AND HMUC.deploy_page = #{deployPage}
+      AND HMUC.pos_x = #{posX}
+      AND HMUC.pos_y = #{posY}
+  </select>
+  
+  <!-- UIComponent 지원 계정 레벨(등급) 리스트 -->
+  <select id="findSupportLevelList"
+    resultType="kr.co.hulan.aas.mvc.api.component.vo.HulanUiComponentLevelVo">
+    SELECT
+      HUCL.hcmpt_id,
+      HUCL.mb_level,
+      MBLV.mb_level_name
+    FROM hulan_ui_component_level HUCL
+    INNER JOIN member_level MBLV ON MBLV.mb_level = HUCL.mb_level
+    WHERE HUCL.hcmpt_id = #{hcmptId}
+  </select>
+  
+  
+  <select id="findSelectableLevelListByHcmptId"
+    resultType="kr.co.hulan.aas.mvc.api.component.vo.HulanUiComponentLevelSelectVo">
+    SELECT
+      #{hcmptId} as hcmpt_id,
+      MBLV.mb_level,
+      MBLV.mb_level_name,
+      case when HUCL.hcmpt_id IS NULL then  0 else 1 end as selected
+    FROM member_level MBLV
+    LEFT JOIN hulan_ui_component_level HUCL ON MBLV.mb_level = HUCL.mb_level AND HUCL.hcmpt_id = #{hcmptId}
+  </select>
+  
+</mapper>

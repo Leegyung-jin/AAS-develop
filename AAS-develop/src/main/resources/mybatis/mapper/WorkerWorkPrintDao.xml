@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkerWorkPrintDao">
+
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkerWorkPrintDto">
+        select
+            WWP.wwp_idx
+            ,WWP.cc_id
+            ,WWP.cc_name
+            ,WWP.wp_id
+            ,WWP.wp_name
+            ,WWP.coop_mb_id
+            ,WWP.coop_mb_name
+            ,WWP.wwp_data
+            ,WWP.wwp_status
+            ,WWP.wwp_date
+            ,WWP.wwp_updatetime
+        from worker_work_print WWP
+        where 'x' = 'x'
+        <if test='wpId != null and wpId != "" '>
+            AND WWP.wp_id = #{wpId}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WWP.cc_id = #{ccId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND WWP.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='wwpStatus != null '>
+            AND WWP.wwp_status = #{wwpStatus}
+        </if>
+        AND WWP.wwp_date = DATE( IFNULL( #{targetDate}, NOW()) )
+        order by wwp_updatetime desc
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        from worker_work_print WWP
+        where 'x' = 'x'
+        <if test='wpId != null and wpId != "" '>
+            AND WWP.wp_id = #{wpId}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WWP.cc_id = #{ccId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND WWP.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='wwpStatus != null '>
+            AND WWP.wwp_status = #{wwpStatus}
+        </if>
+        AND WWP.wwp_date = DATE( IFNULL( #{targetDate}, NOW()) )
+    </select>
+
+
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkerWorkPrintDto">
+        INSERT INTO worker_work_print (
+            cc_id
+            ,cc_name
+            ,wp_id
+            ,wp_name
+            ,coop_mb_id
+            ,coop_mb_name
+            ,wwp_data
+            ,wwp_status
+            ,wwp_date
+            ,wwp_updatetime
+        )
+        VALUES (
+            #{ccId}
+            ,#{ccName}
+            ,#{wpId}
+            ,#{wpName}
+            ,#{coopMbId}
+            ,#{coopMbName}
+            ,#{wwpData}
+            ,#{wwpStatus}
+            ,#{wwpDate}
+            ,NOW()
+        );
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkerWorkPrintDto">
+        UPDATE worker_work_print
+        SET
+            wwp_data = #{wwpData},
+            wwp_updatetime = NOW()
+        WHERE wwp_idx = #{wwpIdx}
+    </update>
+
+    <update id="updateStatus" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkerWorkPrintDto">
+        UPDATE worker_work_print
+        SET
+            wwp_status = #{wwpStatus},
+            wwp_updatetime = NOW()
+        WHERE wwp_idx = #{wwpIdx}
+    </update>
+
+</mapper>

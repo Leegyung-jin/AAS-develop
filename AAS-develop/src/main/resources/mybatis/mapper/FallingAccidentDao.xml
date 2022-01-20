@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.FallingAccidentDao">
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.FallingAccidentDto">
+    SELECT
+      FAR.mb_id,
+      FAR.wp_id,
+      FAR.measure_time,
+      FAR.dashboard_popup,
+      G5MWORK.mb_name,
+      WP.wp_name
+    FROM falling_accident_recent FAR
+    INNER JOIN work_place WP ON WP.wp_id = FAR.wp_id
+    INNER JOIN g5_member G5MWORK ON G5MWORK.mb_id = FAR.mb_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        FAR.mb_id like concat('%', #{COMPLEX} ,'%')
+        OR
+        G5MWORK.mb_name like concat('%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND FAR.mb_id like concat('%', #{mbId} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND G5MWORK.mb_name like concat('%', #{mbName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='startDate != null '>
+      AND FAR.measure_time >= DATE(#{startDate})
+    </if>
+    <if test='endDate != null '>
+      AND FAR.measure_time <![CDATA[<]]> DATE_ADD( DATE(#{endDate}), interval 1 day )
+    </if>
+    ORDER BY FAR.measure_time DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <select id="findListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM falling_accident_recent FAR
+    INNER JOIN work_place WP ON WP.wp_id = FAR.wp_id
+    INNER JOIN g5_member G5MWORK ON G5MWORK.mb_id = FAR.mb_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      FAR.mb_id like concat('%', #{COMPLEX} ,'%')
+      OR
+      G5MWORK.mb_name like concat('%', #{COMPLEX} ,'%')
+      OR
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND FAR.mb_id like concat('%', #{mbId} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND G5MWORK.mb_name like concat('%', #{mbName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='startDate != null '>
+      AND FAR.measure_time >= DATE(#{startDate})
+    </if>
+    <if test='endDate != null '>
+      AND FAR.measure_time <![CDATA[<]]> DATE_ADD( DATE(#{endDate}), interval 1 day )
+    </if>
+  </select>
+
+
+  <select id="findById"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.FallingAccidentDto">
+    SELECT
+      FAR.mb_id,
+      FAR.wp_id,
+      FAR.measure_time,
+      FAR.dashboard_popup,
+      G5MWORK.mb_name,
+      WP.wp_name
+    FROM falling_accident_recent FAR
+    INNER JOIN work_place WP ON WP.wp_id = FAR.wp_id
+    INNER JOIN g5_member G5MWORK ON G5MWORK.mb_id = FAR.mb_id
+    WHERE FAR.mb_id = #{mbId}
+  </select>
+  
+  <select id="findFallingAccidentRecentListByWpId"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.FallingAccidentDto">
+    SELECT
+      FAR.mb_id,
+      FAR.wp_id,
+      FAR.measure_time,
+      FAR.dashboard_popup,
+      G5MWORK.mb_name,
+      WP.wp_name
+    FROM falling_accident_recent FAR
+    INNER JOIN work_place WP ON WP.wp_id = FAR.wp_id
+    INNER JOIN g5_member G5MWORK ON G5MWORK.mb_id = FAR.mb_id
+    WHERE FAR.wp_id = #{wpId}
+    AND FAR.measure_time <![CDATA[ > ]]> DATE_ADD(NOW(), interval -10 minute )
+    AND FAR.dashboard_popup = 1
+    ORDER BY FAR.measure_time DESC
+  </select>
+
+  <select id="findFallingAccidentListByWpId"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.FallingAccidentDto">
+    SELECT
+      FAR.mb_id,
+      FAR.wp_id,
+      FAR.measure_time,
+      FAR.dashboard_popup,
+      G5MWORK.mb_name,
+      WP.wp_name,
+      SI.si_idx,
+      SI.sd_name,
+      SI.si_type,
+      SI.si_place1,
+      SI.si_place2
+    FROM falling_accident_recent FAR
+    INNER JOIN work_place WP ON WP.wp_id = FAR.wp_id
+    INNER JOIN g5_member G5MWORK ON G5MWORK.mb_id = FAR.mb_id
+    LEFT JOIN sensor_log_recent SLR on FAR.wp_id = SLR.wp_id and FAR.mb_id = SLR.mb_id
+    LEFT JOIN sensor_info SI on SLR.si_idx = SI.si_idx
+    WHERE FAR.wp_id = #{wpId}
+    AND FAR.measure_time <![CDATA[ > ]]> DATE_ADD(NOW(), interval -1 day )
+    ORDER BY FAR.measure_time DESC
+  </select>
+
+</mapper>

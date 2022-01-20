@@ -1,0 +1,4 @@
+ ## 느린 API 검색
+ cat ~/log/AAS/was/AAS11.log | grep ONCE_LOG | awk -F '|' '$9 > 3000 {print $n}'
+
+ cat ~/log/RESOURCE/cpuUsage_20211207.log | awk -F ' ' '$4 > 60 {print $n}'

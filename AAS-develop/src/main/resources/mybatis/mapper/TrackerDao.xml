@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.TrackerDao">
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.TrackerDto">
+    SELECT
+      TCK.tracker_id,
+      TCK.device_model,
+      TCK.wp_id,
+      WP.wp_name,
+      WP.cc_id,
+      CC.cc_name,
+      TCKA.coop_mb_id,
+      ( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = TCKA.coop_mb_id ) AS coop_mb_name,
+      TCKA.mb_id,
+      G5MWORK.mb_name,
+      G5MWORK.mb_1 AS member_ship_no,
+      TCKAL.assign_date,
+      TCKAL.assigner,
+      ( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = TCKAL.assigner ) AS assigner_name,
+      TCK.create_date,
+      TCK.creator,
+      TCK.update_date,
+      TCK.updater
+    FROM tracker TCK
+    LEFT JOIN work_place WP ON WP.wp_id = TCK.wp_id
+    LEFT JOIN con_company CC ON CC.cc_id = WP.cc_id
+    LEFT JOIN tracker_assign TCKA ON TCK.tracker_id = TCKA.tracker_id
+    LEFT JOIN g5_member G5MWORK ON G5MWORK.mb_id = TCKA.mb_id
+    LEFT JOIN tracker_assign_log TCKAL ON TCKAL.tal_no = TCKA.tal_no
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        TCK.tracker_id like concat('%', #{COMPLEX} ,'%')
+        OR
+        TCKA.mb_id like concat('%', #{COMPLEX} ,'%')
+        OR
+        G5MWORK.mb_name like concat('%', #{COMPLEX} ,'%')
+        OR
+        G5MWORK.mb_1 like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='trackerId != null and trackerId != "" '>
+      AND TCK.tracker_id like concat('%', #{trackerId} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND TCKA.coop_mb_id = #{coopMbId}
+    </if>
+    <if test='assign != null '>
+      <choose>
+        <when test='assign = 0 '>
+          AND TCKA.mb_id IS NULL
+        </when>
+        <otherwise>
+          AND TCKA.mb_id IS NOT NULL
+        </otherwise>
+      </choose>
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND TCKA.mb_id like concat('%', #{mbId} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND G5MWORK.mb_name like concat('%', #{mbName} ,'%')
+    </if>
+    <if test='memberShipNo != null and memberShipNo != "" '>
+      AND G5MWORK.mb_1 like concat( '%', #{memberShipNo} ,'%')
+    </if>
+    ORDER BY TCK.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <select id="findListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+      count(*) AS CNT
+    FROM tracker TCK
+    LEFT JOIN work_place WP ON WP.wp_id = TCK.wp_id
+    LEFT JOIN con_company CC ON CC.cc_id = WP.cc_id
+    LEFT JOIN tracker_assign TCKA ON TCK.tracker_id = TCKA.tracker_id
+    LEFT JOIN g5_member G5MWORK ON G5MWORK.mb_id = TCKA.mb_id
+    LEFT JOIN tracker_assign_log TCKAL ON TCKAL.tal_no = TCKA.tal_no
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        TCK.tracker_id like concat('%', #{COMPLEX} ,'%')
+        OR
+        TCKA.mb_id like concat('%', #{COMPLEX} ,'%')
+        OR
+        G5MWORK.mb_name like concat('%', #{COMPLEX} ,'%')
+        OR
+        G5MWORK.mb_1 like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='trackerId != null and trackerId != "" '>
+      AND TCK.tracker_id like concat('%', #{trackerId} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND TCKA.coop_mb_id = #{coopMbId}
+    </if>
+    <if test='assign != null '>
+      <choose>
+        <when test='assign = 0 '>
+          AND TCKA.mb_id IS NULL
+        </when>
+        <otherwise>
+          AND TCKA.mb_id IS NOT NULL
+        </otherwise>
+      </choose>
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND TCKA.mb_id like concat('%', #{mbId} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND G5MWORK.mb_name like concat('%', #{mbName} ,'%')
+    </if>
+    <if test='memberShipNo != null and memberShipNo != "" '>
+      AND G5MWORK.mb_1 like concat( '%', #{memberShipNo} ,'%')
+    </if>
+  </select>
+
+
+  <select id="findById"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.TrackerDto">
+    SELECT
+      TCK.tracker_id,
+      TCK.device_model,
+      TCK.wp_id,
+      WP.wp_name,
+      WP.cc_id,
+      CC.cc_name,
+      TCKA.coop_mb_id,
+      ( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = TCKA.coop_mb_id ) AS coop_mb_name,
+      TCKA.mb_id,
+      G5MWORK.mb_name,
+      G5MWORK.mb_1 AS member_ship_no,
+      TCKAL.assign_date,
+      TCKAL.assigner,
+      ( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = TCKAL.assigner ) AS assigner_name,
+      TCK.create_date,
+      TCK.creator,
+      TCK.update_date,
+      TCK.updater
+    FROM tracker TCK
+    LEFT JOIN work_place WP ON WP.wp_id = TCK.wp_id
+    LEFT JOIN con_company CC ON CC.cc_id = WP.cc_id
+    LEFT JOIN tracker_assign TCKA ON TCK.tracker_id = TCKA.tracker_id
+    LEFT JOIN g5_member G5MWORK ON G5MWORK.mb_id = TCKA.mb_id
+    LEFT JOIN tracker_assign_log TCKAL ON TCKAL.tal_no = TCKA.tal_no
+    WHERE TCK.tracker_id = #{trackerId}
+  </select>
+
+</mapper>

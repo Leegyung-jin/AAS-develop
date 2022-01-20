@@ -1,0 +1,1424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceDao">
+
+  <!-- 현장 관리 > 현장 목록 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceDto">
+    SELECT
+      WP.wp_idx
+      ,WP.wp_id
+      ,WP.cc_id
+      ,WP.cc_name
+      ,WP.man_mb_id
+      ,WP.man_mb_name
+      ,WP.wp_name
+      ,WP.wp_cate
+      ,WP.wp_sido
+      ,WP.wp_gugun
+      ,WP.wp_addr
+      ,WP.wp_tel
+      ,WP.wp_start_date
+      ,WP.wp_end_date
+      ,WP.uninjury_record_date
+      ,WP.wp_edutime_start
+      ,WP.wp_edutime_end
+      ,WP.wp_end_status
+      ,WP.wp_memo
+      ,WP.wp_datetime
+      ,WP.view_map_file_name
+      ,WP.view_map_file_name_org
+      ,WP.view_map_file_path
+      ,WP.view_map_file_location
+      ,WP.default_coop_mb_id
+      ,IFNULL( WPMC.support_ble, 0 ) AS support_ble
+      ,IFNULL( WPMC.support_gps, 0 ) AS support_gps
+      ,IFNULL( WPMC.support_3d, 0 ) AS support_3d
+      ,( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = WP.default_coop_mb_id ) AS default_coop_mb_name
+      ,IFNULL((
+        select count(*)
+        from work_place_worker WPW
+        WHERE WPW.wp_id = WP.wp_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND WPW.coop_mb_id = #{coopMbId}
+        </if>
+      ), 0) AS worker_count
+      ,IFNULL((
+        select count(*)
+        from attendance_book ADB
+        where ADB.wp_id = WP.wp_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND ADB.coop_mb_id = #{coopMbId}
+        </if>
+        AND ADB.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+    ), 0) AS worker_today_count
+      ,IFNULL((
+        select count(*)
+        from attendance_book ADB
+        where ADB.wp_id = WP.wp_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND ADB.coop_mb_id = #{coopMbId}
+        </if>
+        <choose>
+          <when test='startDate != null and endDate != null  '>
+          AND ADB.working_day >= DATE_FORMAT( DATE_SUB(DATE_ADD(LAST_DAY(#{startDate}), INTERVAL 1 DAY), INTERVAL 1 MONTH) , '%Y%m%d')
+          AND ADB.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(#{endDate}), INTERVAL 1 DAY) , '%Y%m%d')
+          </when>
+          <otherwise>
+            AND ADB.working_day >= DATE_FORMAT( DATE_SUB(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), INTERVAL 1 MONTH) , '%Y%m%d')
+            AND ADB.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY) , '%Y%m%d')
+          </otherwise>
+        </choose>
+      ), 0) AS worker_month_count
+      ,IFNULL((
+        select count(*)
+        from attendance_book ADB
+        where ADB.wp_id = WP.wp_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND ADB.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='startDate != null and endDate != null '>
+          AND ADB.working_day >= DATE_FORMAT( DATE_SUB(DATE_ADD(LAST_DAY(#{startDate}), INTERVAL 1 DAY), INTERVAL 1 MONTH) , '%Y%m%d')
+          AND ADB.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(#{endDate}), INTERVAL 1 DAY) , '%Y%m%d')
+        </if>
+      ), 0) AS worker_total_count,
+      GCPI.gps_center_long,
+      GCPI.gps_center_lat,
+      OFFC.office_no,
+      OFFC.office_name
+    FROM work_place WP
+    LEFT JOIN work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    LEFT JOIN gps_check_policy_info GCPI ON GCPI.wp_id = WP.wp_id
+    LEFT JOIN entr_gate_workplace EGW ON EGW.wp_id = WP.wp_id
+    LEFT JOIN ordering_office OFFC ON OFFC.office_no = WP.office_no
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND EXISTS(
+          SELECT 1
+          FROM construction_site CS
+          WHERE CS.wp_id = WP.wp_id
+          AND CS.cc_id = #{ccId}
+          LIMIT 1
+      )
+    </if>
+    <choose>
+      <when test='gps != null and gps eq "1" '>
+        AND EXISTS(
+        SELECT 'x'
+        FROM gps_check_policy_info GCPI
+        WHERE GCPI.wp_id = WP.wp_id
+        LIMIT 1
+        )
+      </when>
+      <when test='gps != null and gps eq "0" '>
+        AND NOT EXISTS(
+        SELECT 'x'
+        FROM gps_check_policy_info GCPI
+        WHERE GCPI.wp_id = WP.wp_id
+        LIMIT 1
+        )
+      </when>
+    </choose>
+    <choose>
+      <when test='bls != null and bls eq "1" '>
+        AND WP.view_map_file_name IS NOT NULL AND TRIM( WP.view_map_file_name ) != ''
+      </when>
+      <when test='bls != null and bls eq "0" '>
+        AND ( WP.view_map_file_name IS NULL OR TRIM( WP.view_map_file_name ) = '' )
+      </when>
+    </choose>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND EXISTS (
+      SELECT 1
+      FROM work_place_coop WPC
+      where WPC.wp_id = WP.wp_id
+      AND WPC.coop_mb_id = #{coopMbId}
+      LIMIT 1
+      )
+    </if>
+    <if test='entergate != null '>
+      <choose>
+        <when test='entergate == 0'>
+          AND EGW.wp_id IS NULL
+        </when>
+        <when test='entergate == 1'>
+          AND EGW.wp_id IS NOT NULL
+        </when>
+      </choose>
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY WP.wp_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 현장 관리 > 현장 목록 -->
+  <select id="findListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM work_place WP
+    LEFT JOIN entr_gate_workplace EGW ON EGW.wp_id = WP.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND EXISTS(
+        SELECT 1
+        FROM construction_site CS
+        WHERE CS.wp_id = WP.wp_id
+        AND CS.cc_id = #{ccId}
+        LIMIT 1
+      )
+    </if>
+    <choose>
+      <when test='gps != null and gps eq "1" '>
+        AND EXISTS(
+        SELECT 'x'
+        FROM gps_check_policy_info GCPI
+        WHERE GCPI.wp_id = WP.wp_id
+        LIMIT 1
+        )
+      </when>
+      <when test='gps != null and gps eq "0" '>
+        AND NOT EXISTS(
+        SELECT 'x'
+        FROM gps_check_policy_info GCPI
+        WHERE GCPI.wp_id = WP.wp_id
+        LIMIT 1
+        )
+      </when>
+    </choose>
+    <choose>
+      <when test='bls != null and bls eq "1" '>
+        AND WP.view_map_file_name IS NOT NULL AND TRIM( WP.view_map_file_name ) != ''
+      </when>
+      <when test='bls != null and bls eq "0" '>
+        AND ( WP.view_map_file_name IS NULL OR TRIM( WP.view_map_file_name ) = '' )
+      </when>
+    </choose>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND EXISTS (
+      SELECT 1
+      FROM work_place_coop WPC
+      where WPC.wp_id = WP.wp_id
+      AND WPC.coop_mb_id = #{coopMbId}
+      LIMIT 1
+      )
+    </if>
+    <if test='entergate != null '>
+      <choose>
+        <when test='entergate == 0'>
+          AND EGW.wp_id IS NULL
+        </when>
+        <when test='entergate == 1'>
+          AND EGW.wp_id IS NOT NULL
+        </when>
+      </choose>
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+
+
+  <select id="findListForCode"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceDto">
+    SELECT
+    WP.wp_id,
+    WP.wp_name
+    FROM work_place WP
+    WHERE 'x' = 'x'
+    <if test='ccId != null and ccId != "" '>
+      AND EXISTS(
+        SELECT 1
+        FROM construction_site CS
+        WHERE CS.wp_id = WP.wp_id
+        AND CS.cc_id = #{ccId}
+        LIMIT 1
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND EXISTS(
+      SELECT 'x'
+      FROM work_place_coop WPC
+      WHERE WP.wp_id = WPC.wp_id AND WPC.coop_mb_id = #{coopMbId}
+      LIMIT 1
+      )
+    </if>
+    <choose>
+      <when test='gps != null and gps eq "1" '>
+        AND EXISTS(
+        SELECT 'x'
+        FROM gps_check_policy_info GCPI
+        WHERE GCPI.wp_id = WP.wp_id
+        LIMIT 1
+        )
+      </when>
+      <when test='gps != null and gps eq "0" '>
+        AND NOT EXISTS(
+        SELECT 'x'
+        FROM gps_check_policy_info GCPI
+        WHERE GCPI.wp_id = WP.wp_id
+        LIMIT 1
+        )
+      </when>
+    </choose>
+    <choose>
+      <when test='bls != null and bls eq "1" '>
+        AND WP.view_map_file_name IS NOT NULL AND TRIM( WP.view_map_file_name ) != ''
+      </when>
+      <when test='bls != null and bls eq "0" '>
+        AND ( WP.view_map_file_name IS NULL OR TRIM( WP.view_map_file_name ) = '' )
+      </when>
+    </choose>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY WP.wp_name ASC
+  </select>
+
+
+  <!-- Smart 안전모니터 지원 가능 현장 정보 -->
+  <select id="findWorkplaceSupportMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.WorkplaceSupportMonitoringDto">
+    SELECT
+      WP.wp_id
+      ,WP.wp_name
+      ,WP.cc_id
+      ,IFNULL( CC.cc_name, WP.cc_name ) AS cc_name
+      ,WP.wp_sido
+      ,WP.wp_gugun
+      ,WP.view_map_file_name
+      ,WP.view_map_file_name_org
+      ,WP.view_map_file_path
+      ,WP.view_map_file_location
+      ,WP.activation_geofence_latitude
+      ,WP.activation_geofence_longitude
+      ,GCPI.gps_center_long
+      ,GCPI.gps_center_lat
+      ,WPMC.support_ble
+      ,WPMC.support_gps
+      ,WPMC.support_3d
+      ,WPMC.nx
+      ,WPMC.ny
+    FROM work_place WP
+    INNER JOIN work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    LEFT JOIN gps_check_policy_info GCPI ON GCPI.wp_id = WP.wp_id
+    LEFT JOIN con_company CC ON CC.cc_id = WP.cc_id
+    WHERE WP.wp_end_status = 0
+    AND ( WPMC.support_ble = 1 OR WPMC.support_gps = 1 OR WPMC.support_3d = 1 )
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY WP.wp_name, WP.wp_datetime DESC
+  </select>
+
+  <!-- 센서관리 > 현장별 센서 -->
+  <select id="findSensorSituationListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceDto">
+    SELECT
+    WP.wp_idx,
+    WP.wp_id,
+    WP.wp_name,
+    MCC.cc_id,
+    MCC.cc_name,
+    IFNULL((
+    select count(*)
+    from sensor_info SI
+    where SI.wp_id = WP.wp_id
+    <if test='siType != null and siType != "" '>
+      AND SI.si_type = #{siType}
+    </if>
+    <if test='sdIdx != null '>
+      AND SI.sd_idx = #{sdIdx}
+    </if>
+    ), 0) AS sensor_count
+    FROM work_place WP
+    INNER JOIN con_company MCC ON MCC.cc_id = WP.cc_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND EXISTS(
+        SELECT 1
+        FROM construction_site CS
+        WHERE CS.wp_id = WP.wp_id
+        AND CS.cc_id = #{ccId}
+        LIMIT 1
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND EXISTS (
+      SELECT 1
+      FROM work_place_coop WPC
+      where WPC.wp_id = WP.wp_id
+      AND WPC.coop_mb_id = #{coopMbId}
+      LIMIT 1
+      )
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY WP.wp_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 센서관리 > 현장별 센서 -->
+  <select id="findSensorSituationListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM work_place WP
+    INNER JOIN con_company MCC ON MCC.cc_id = WP.cc_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND EXISTS(
+        SELECT 1
+        FROM construction_site CS
+        WHERE CS.wp_id = WP.wp_id
+        AND CS.cc_id = #{ccId}
+        LIMIT 1
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+
+  <!-- 근태관리 > 현장별현황-->
+  <select id="findSafetySituationListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceDto">
+    SELECT
+    WP.wp_idx,
+    WP.wp_id,
+    WP.wp_name,
+    WP.cc_id,
+    WP.cc_name,
+    IFNULL((
+    select count(*)
+    from work_place_worker WPW
+    where WPW.wp_id = WP.wp_id
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = WPC.coop_mb_id
+    </if>
+    ), 0) AS worker_count,
+    IFNULL((
+    select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+    from sensor_log_inout SLI
+    WHERE SLI.wp_id = WP.wp_id
+    AND SLI.si_type = '출입용'
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND SLI.coop_mb_id = WPC.coop_mb_id
+    </if>
+    AND SLI.sli_in_datetime >= DATE(NOW())
+    AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+    ), 0) AS worker_today_count,
+    IFNULL((
+    select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+    from sensor_log_inout SLI
+    WHERE SLI.wp_id = WP.wp_id
+    AND SLI.si_type = '출입용'
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND SLI.coop_mb_id = WPC.coop_mb_id
+    </if>
+    AND SLI.sli_in_datetime >= DATE( DATE_ADD(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), INTERVAL - 1 MONTH) )
+    AND SLI.sli_in_datetime <![CDATA[<]]> DATE( DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY) )
+    ), 0) AS worker_month_count,
+    IFNULL((
+    select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+    from sensor_log_inout SLI
+    WHERE SLI.wp_id = WP.wp_id
+    AND SLI.si_type = '출입용'
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND SLI.coop_mb_id = WPC.coop_mb_id
+    </if>
+    <if test='startDate != null and endDate != null '>
+      AND SLI.sli_in_datetime >= #{startDate}
+      AND SLI.sli_in_datetime <![CDATA[<=]]> #{endDate}
+    </if>
+    ), 0) AS worker_total_count
+    FROM work_place WP
+    <if test='coopMbId != null and coopMbId != "" '>
+      INNER JOIN work_place_coop WPC ON WPC.wp_id = WP.wp_id
+    </if>
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND WP.cc_id = #{ccId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+    ORDER BY WP.wp_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 근태관리 > 현장별현황-->
+  <select id="findSafetySituationListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM work_place WP
+    <if test='coopMbId != null and coopMbId != "" '>
+      INNER JOIN work_place_coop WPC ON WPC.wp_id = WP.wp_id
+    </if>
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND WP.cc_id = #{ccId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+  </select>
+
+
+  <select id="findById"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceDto">
+        SELECT
+            WP.wp_idx
+            ,WP.wp_id
+            ,WP.cc_id
+            ,WP.cc_name
+            ,WP.man_mb_id
+            ,WP.man_mb_name
+            ,WP.wp_name
+            ,WP.wp_cate
+            ,WP.wp_sido
+            ,WP.wp_gugun
+            ,WP.wp_addr
+            ,WP.wp_tel
+            ,WP.wp_start_date
+            ,WP.wp_end_date
+            ,WP.uninjury_record_date
+            ,WP.wp_edutime_start
+            ,WP.wp_edutime_end
+            ,WP.construct_scale
+            ,WP.wp_end_status
+            ,WP.wp_memo
+            ,WP.wp_datetime
+            ,WP.view_map_file_name
+            ,WP.view_map_file_name_org
+            ,WP.view_map_file_path
+            ,WP.view_map_file_location
+            ,WP.default_coop_mb_id
+            ,( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = WP.default_coop_mb_id ) AS default_coop_mb_name
+            ,WP.link_cctv
+            ,WP.link_mesurement as link_measurement
+            ,WP.link_wearable_1
+            ,WP.link_wearable_2
+            ,WP.station_name
+            ,WP.activation_geofence_longitude
+            ,WP.activation_geofence_latitude
+            ,WP.activation_geofence_radius
+            ,WPA.sigungu
+            ,WPA.bname
+            ,WPA.address
+            ,CASE WHEN WP.link_wearable_1 IS NOT NULL AND WP.link_wearable_1 != '' THEN IFNULL( WP.link_wearable_1_status , 0 ) ELSE NULL END AS link_wearable_1_status
+            ,CASE WHEN WP.link_wearable_2 IS NOT NULL AND WP.link_wearable_2 != '' THEN IFNULL( WP.link_wearable_2_status , 0 ) ELSE NULL END AS link_wearable_2_status
+            ,IFNULL( WPMC.current_worker_gps, 0 ) AS current_worker_gps
+            ,IFNULL( WPMC.current_worker_ble, 0 ) AS current_worker_ble
+            ,IFNULL( WPMC.environment_dust, 0 ) AS environment_dust
+            ,IFNULL( WPMC.environment_noise, 0 ) AS environment_noise
+            ,IFNULL( WPMC.environment_gas, 0 ) AS environment_gas
+            ,IFNULL( WPMC.support_ble, 0 ) AS support_ble
+            ,IFNULL( WPMC.support_gps, 0 ) AS support_gps
+            ,IFNULL( WPMC.support_3d, 0 ) AS support_3d
+            ,IFNULL( WPMC.falling_event, 0 ) AS falling_event
+            ,IFNULL( WPMC.kalman_filter, 0 ) AS kalman_filter
+            ,GCPI.gps_center_lat
+            ,GCPI.gps_center_long
+            ,OFFC.office_no
+            ,OFFC.office_name
+        FROM work_place WP
+        LEFT JOIN work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+        LEFT JOIN gps_check_policy_info GCPI on GCPI.wp_id = WP.wp_id
+        LEFT JOIN work_place_address WPA on WP.wp_id = WPA.wp_id
+        LEFT JOIN ordering_office OFFC on OFFC.office_no = WP.office_no
+        WHERE WP.wp_id = #{wpId}
+    </select>
+
+  <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceDto">
+    INSERT INTO work_place (
+    wp_id
+    , wp_cate
+    , cc_id
+    , cc_name
+    , man_mb_id
+    , man_mb_name
+    , wp_name
+    , wp_sido
+    , wp_gugun
+    , wp_addr
+    , wp_tel
+    , wp_end_date
+    , wp_edutime_start
+    , wp_edutime_end
+    , wp_end_status
+    , wp_memo
+    , wp_datetime
+    , view_map_file_name
+    , view_map_file_name_org
+    , view_map_file_path
+    , view_map_file_location
+    , default_coop_mb_id
+    )
+    VALUES (
+    #{wpId}
+    , #{wpCate}
+    , #{ccId}
+    , #{ccName}
+    , #{manMbId}
+    , #{manMbName}
+    , #{wpName}
+    , #{wpSido}
+    , #{wpGugun}
+    , #{wpAddr}
+    , #{wpTel}
+    <choose><when test="wpEndDate != null ">, DATE(#{wpEndDate})</when><otherwise>, NULL</otherwise></choose>
+    <choose><when test="wpEdutimeStart != null ">, #{wpEdutimeStart}</when><otherwise>, NULL</otherwise></choose>
+    <choose><when test="wpEdutimeEnd != null ">, #{wpEdutimeEnd}</when><otherwise>, NULL</otherwise></choose>
+    , #{wpEndStatus}
+    , #{wpMemo}
+    , NOW()
+    ,#{viewMapFileName,jdbcType=VARCHAR}
+    ,#{viewMapFileNameOrg,jdbcType=VARCHAR}
+    ,#{viewMapFilePath,jdbcType=VARCHAR}
+    ,#{viewMapFileLocation,jdbcType=INTEGER}
+    ,#{defaultCoopMbId,jdbcType=VARCHAR}
+    );
+    <selectKey resultType="int" keyProperty="wpIdx" order="AFTER">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+  </insert>
+
+  <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceDto">
+    UPDATE work_place
+    SET
+    wp_cate = #{wpCate}
+    , man_mb_id = #{manMbId}
+    , man_mb_name = #{manMbName}
+    , wp_name = #{wpName}
+    , wp_sido = #{wpSido}
+    , wp_gugun = #{wpGugun}
+    , wp_addr = #{wpAddr}
+    , wp_tel = #{wpTel}
+    , wp_end_date = <choose><when test="wpEndDate != null "> DATE(#{wpEndDate})</when><otherwise>NULL</otherwise></choose>
+    , wp_edutime_start = <choose><when test="wpEdutimeStart != null "> #{wpEdutimeStart}</when><otherwise>NULL</otherwise></choose>
+    , wp_edutime_end = <choose><when test="wpEdutimeEnd != null "> #{wpEdutimeEnd}</when><otherwise>NULL</otherwise></choose>
+    , wp_end_status = #{wpEndStatus}
+    , wp_memo = #{wpMemo}
+    , view_map_file_name = #{viewMapFileName,jdbcType=VARCHAR}
+    , view_map_file_name_org = #{viewMapFileNameOrg,jdbcType=VARCHAR}
+    , view_map_file_path = #{viewMapFilePath,jdbcType=VARCHAR}
+    , view_map_file_location = #{viewMapFileLocation,jdbcType=INTEGER}
+    , default_coop_mb_id = #{defaultCoopMbId,jdbcType=VARCHAR}
+    WHERE wp_id = #{wpId}
+  </update>
+  
+  
+  <!--
+    통합 관제 계정별 지원 현장 수
+  -->
+  <select id="findSupportedWorkplaceByAccount"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSummaryVo">
+    select
+      WP.wp_id
+      ,WP.wp_name
+    from work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+  
+  <!--
+    통합 관제 계정별 지원 현장 수
+  -->
+  <select id="countSupportedWorkplaceByAccount"
+    parameterType="map"
+    resultType="int">
+    select
+      count(*) as workplace_count
+    from work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+  
+  
+  
+  <resultMap id="HiccWorkplaceSummaryPerSidoMap" type="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSummaryPerSidoVo" autoMapping="true">
+    <id property="sidoCd" column="sido_cd"/>
+    <association
+      property="weatherInfo"
+      columnPrefix="swa_"
+      notNullColumn="sido_cd"
+      javaType="kr.co.hulan.aas.mvc.api.hicc.vo.HiccSidoWeatherVo"
+      autoMapping="true">
+    </association>
+    <collection property="list"
+      ofType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSummaryVo"
+      autoMapping="true"
+    >
+      <id property="wpId" column="wp_id"/>
+    </collection>
+  </resultMap>
+  
+  <!--
+    통합 관제 시도별 현장 요약 정보
+  -->
+  <select id="findWorkplaceSummaryPerSido"
+    parameterType="map"
+    resultMap="HiccWorkplaceSummaryPerSidoMap">
+    select
+      RS.sido_cd
+      ,RS.sido_nm
+      ,RS.sido_short_nm
+      ,RS.sido_ord
+      ,WP.wp_id
+      ,WP.wp_name
+      ,<include refid="kr.co.hulan.aas.mvc.dao.mapper.AirEnvironmentDao.sidoWeatherAtmosphere">
+        <property name="alias" value="SWA"/><property name="alias_column" value="swa_"/>
+      </include>
+    from region_sido RS
+    left join sido_weather_atmosphere SWA ON SWA.sido_cd = RS.sido_cd
+    left join work_place_address WPA ON WPA.sigungu_code like concat( RS.sido_cd, '%' )
+    left join work_place WP ON WP.wp_id = WPA.wp_id AND WP.wp_end_status = 0
+      AND EXISTS(
+        select 1 from work_place_monitor_config WPMC where WPMC.wp_id = WP.wp_id LIMIT 1
+      )
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+    where 'x' = 'x'
+    ORDER BY RS.sido_ord
+  </select>
+  
+  <resultMap id="HiccWorkplaceSummaryPerSigunguMap" type="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSummaryPerSigunguVo" autoMapping="true">
+    <id property="sigunguCd" column="sigungu_cd"/>
+    <collection property="list"
+      ofType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSummaryVo"
+      autoMapping="true"
+    >
+      <id property="wpId" column="wp_id"/>
+    </collection>
+  </resultMap>
+  <!--
+    통합 관제 시군구별 현장 요약 정보
+  -->
+  <select id="findWorkplaceSummaryByRegion"
+    parameterType="map"
+    resultMap="HiccWorkplaceSummaryPerSigunguMap">
+    select
+      RSP.region_cd as sigungu_cd
+      ,RSP.region_nm_full  as sigungu_nm_full
+      ,RSP.x as pos_x
+      ,RSP.y as pos_y
+      ,WP.wp_id
+      ,WP.wp_name
+    from work_place WP
+    inner join work_place_address WPA ON WP.wp_id = WPA.wp_id
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    inner join region_sigungu_point RSP ON WPA.bcode like concat(RSP.region_cd, '%')
+    where WP.wp_end_status = 0
+    AND WPA.sigungu_code like concat(#{sidoCd}, '%')
+    AND WPA.bcode IS NOT NULL AND WPA.bcode != ''
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY sigungu_nm_full
+  </select>
+  
+  <!--
+    통합 관제 현장 상황 정보
+  -->
+  <select id="findWorkplaceState"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceStateVo">
+    select
+      WP.wp_id,
+      sum( WPW.use_app_worker ) as use_app_worker_count,
+      count(distinct WPW.worker_mb_id) as total_worker_count,
+      sum( case when WPW.need_device_check = 1 then WPW.use_app_worker * WPW.active_worker else WPW.active_worker end ) as active_worker_count,
+      sum( WPW.use_app_worker * WPW.danger_worker ) as danger_worker_count,
+      IFNULL( (
+        select count(*)
+        from building BD
+        inner join sensor_building_location SBL ON SBL.building_no = BD.building_no
+        where BD.wp_id = WP.wp_id
+      ), 0 ) as sensor_count,
+      IFNULL( (
+        select count(*)
+        from admin_msg_info AMI
+        inner join admin_msg_type AMT ON AMT.msg_type = AMI.msg_type
+        where AMI.wp_id = WP.wp_id
+        AND AMI.upt_datetime >= DATE(NOW())
+      ), 0 ) as danger_msg_count
+    from work_place WP
+    left join (
+      select
+        WPW.wp_id,
+        WPW.worker_mb_id,
+        case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+        case
+          when WPMC.support_gps = 1 then
+            IFNULL((
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+            ), 0)
+          when WPMC.support_ble = 1 then
+            IFNULL((
+            SELECT 1
+            FROM sensor_log_recent SLR
+            INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+            WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+            AND SLR.slr_datetime  >= DATE(NOW())
+            AND SLR.in_out_type IN ( 0, 1 )
+            LIMIT 1
+          ), 0)
+          else 0
+        end as active_worker,
+        IFNULL((
+          select 1
+          from sensor_log_recent SLR
+          inner join sensor_info SI on SLR.si_idx = SI.si_idx
+          where SLR.wp_id = WPW.wp_id and SLR.mb_id = WPW.worker_mb_id
+          AND SI.si_type = '위험지역'
+          AND SLR.slr_datetime >= DATE(NOW())
+          AND SLR.slr_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          AND SLR.in_out_type IN ( 0, 1 )
+          LIMIT 1
+        ), 0) as danger_worker,
+        case when
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+            <property name="aliasDeviceStatus" value="WDS"/>
+          </include>
+          then 1 else 0
+              end as use_app_worker
+      from work_place_worker WPW
+      inner join work_place WP ON WP.wp_id = WPW.wp_id
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      where WPW.wp_id = #{wpId}
+      AND WPW.wpw_out = 0
+      AND exists (
+        select 1
+        from sensor_log_inout SLI
+        where SLI.wp_id = WPW.wp_id and SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        LIMIT 1
+      )
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+    ) WPW ON WPW.wp_id = WP.wp_id
+    where WP.wp_id = #{wpId}
+    group by WP.wp_id
+  </select>
+  
+  <select id="findWorkplaceState2"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccStateIndicator2Vo">
+    select
+        WPW.wp_id,
+        IFNULL( (
+          select count(*)
+          from attendance_book ADB
+          WHERE ADB.wp_id = WPW.wp_id
+          AND ADB.working_day = DATE_FORMAT(NOW(),'%Y%m%d')
+          AND ADB.mb_level IS NOT NULL AND ADB.mb_level != 2
+        ), 0 ) as total_manager_count,
+        count(distinct WPW.worker_mb_id) as total_worker_count,
+        sum( active_worker ) as active_worker_count,
+        sum( WPW.danger_worker ) as danger_worker_count,
+        IFNULL( ( select count(*) from work_place_coop WPC where WPC.wp_id = WPW.wp_id ), 0 ) AS coop_count,
+        IFNULL( (
+          select count(*)
+          from work_equipment_info WEI
+          INNER JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+          LEFT JOIN icon_code IC ON IC.icon_type = EC.icon_type
+          WHERE WEI.wp_id = WPW.wp_id
+          AND (
+            WEI.ope_type = 0
+            OR (
+              WEI.ope_type = 1 AND WEI.ope_start <![CDATA[<=]]> NOW() AND WEI.ope_end <![CDATA[>=]]> NOW()
+            )
+          )
+        ), 0 ) as equipment_count,
+        IFNULL( (
+          select count(*)
+          from admin_msg_info AMI
+          inner join admin_msg_type AMT ON AMT.msg_type = AMI.msg_type
+          where AMI.wp_id = WPW.wp_id
+          AND AMI.upt_datetime >= DATE(NOW())
+        ), 0 ) as danger_msg_count
+      from  (
+        SELECT
+          WPW.wp_id,
+          WPW.wp_name,
+          WPW.coop_mb_id,
+          WPW.worker_mb_id,
+          WPW.work_section_b,
+          WPW.temperature,
+          WPW.commute_type,
+          WPW.measure_time,
+          case when WPW.close_reason = 1 then 1 else 0 end as active_worker,
+          IFNULL((
+            select 1
+            from sensor_log_recent SLR
+            inner join sensor_info SI on SLR.si_idx = SI.si_idx
+            where SLR.wp_id = WPW.wp_id and SLR.mb_id = WPW.worker_mb_id
+            AND SI.si_type = '위험지역'
+            AND SLR.slr_datetime >= DATE(NOW())
+            AND SLR.slr_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+            AND SLR.in_out_type IN ( 0, 1 )
+            LIMIT 1
+          ), 0) as danger_worker
+        FROM (
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWorkerDao.monitoringWorkerWithActiveInfoSql" />
+          inner join work_place WP ON WP.wp_id = RES.wp_id
+          WHERE <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+            <property name="alias" value="WP"/>
+          </include>
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+          </include>
+        ) WPW
+      ) WPW
+      group by WPW.wp_id
+  </select>
+  
+  
+  <!-- HICC 전체 지표 -->
+  <select id="findNationWideState"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.main.HiccNationWideStateIndicatorVo">
+    select
+      IFNULL(sum(TOT.use_app_worker_count), 0) as use_app_worker_count,
+      IFNULL(sum(TOT.total_worker_count), 0) as total_worker_count,
+      IFNULL(sum(TOT.active_worker_count), 0) as active_worker_count,
+      IFNULL(sum(TOT.danger_worker_count), 0) as danger_worker_count
+    from  (
+      select
+        sum( WPW.use_app_worker ) as use_app_worker_count,
+        count(distinct WPW.worker_mb_id) as total_worker_count,
+        sum( case when WPW.need_device_check = 1 then WPW.use_app_worker * WPW.active_worker else WPW.active_worker end ) as active_worker_count,
+        sum( WPW.use_app_worker * WPW.danger_worker ) as danger_worker_count
+      from  (
+        select
+          WPW.wp_id,
+          WPW.worker_mb_id,
+          case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+          case
+            when WPMC.support_gps = 1 then
+            IFNULL((
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+            ), 0)
+            when WPMC.support_ble = 1 then
+            IFNULL((
+              SELECT 1
+              FROM sensor_log_recent SLR
+              INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+              WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+              AND SLR.slr_datetime  >= DATE(NOW())
+              AND SLR.in_out_type IN ( 0, 1 )
+              LIMIT 1
+            ), 0)
+            else 0
+          end as active_worker,
+          IFNULL((
+            select 1
+            from sensor_log_recent SLR
+            inner join sensor_info SI on SLR.si_idx = SI.si_idx
+            where SLR.wp_id = WPW.wp_id and SLR.mb_id = WPW.worker_mb_id
+            AND SI.si_type = '위험지역'
+            AND SLR.slr_datetime >= DATE(NOW())
+            AND SLR.slr_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+            AND SLR.in_out_type IN ( 0, 1 )
+            LIMIT 1
+          ), 0) as danger_worker,
+          case when
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+              <property name="aliasDeviceStatus" value="WDS"/>
+            </include>
+            then 1 else 0
+          end as use_app_worker
+        from work_place WP
+        inner join work_place_worker WPW ON WP.wp_id = WPW.wp_id
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+        where WPW.wpw_out = 0
+        AND exists (
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+      ) WPW
+      group by WPW.wp_id
+    ) TOT
+  </select>
+
+  
+  <select id="findTotalWorkplaceState"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccStateIndicatorVo">
+    select
+      IFNULL(sum(TOT.use_app_worker_count), 0) as use_app_worker_count,
+      IFNULL(sum(TOT.total_worker_count), 0) as total_worker_count,
+      IFNULL(sum(TOT.active_worker_count), 0) as active_worker_count,
+      IFNULL(sum(TOT.danger_worker_count), 0) as danger_worker_count,
+      IFNULL(sum(TOT.sensor_count) , 0)as sensor_count,
+      IFNULL(sum(TOT.danger_msg_count), 0) as danger_msg_count
+    from  (
+      select
+        sum( WPW.use_app_worker ) as use_app_worker_count,
+        count(distinct WPW.worker_mb_id) as total_worker_count,
+        sum( case when WPW.need_device_check = 1 then WPW.use_app_worker * WPW.active_worker else WPW.active_worker end ) as active_worker_count,
+        sum( WPW.use_app_worker * WPW.danger_worker ) as danger_worker_count,
+        IFNULL( (
+          select count(*)
+          from building BD
+          inner join sensor_building_location SBL ON SBL.building_no = BD.building_no
+          where BD.wp_id = WPW.wp_id
+        ), 0 ) as sensor_count,
+        IFNULL( (
+          select count(*)
+          from admin_msg_info AMI
+          inner join admin_msg_type AMT ON AMT.msg_type = AMI.msg_type
+          where AMI.wp_id = WPW.wp_id
+          AND AMI.upt_datetime >= DATE(NOW())
+        ), 0 ) as danger_msg_count
+      from  (
+        select
+          WPW.wp_id,
+          WPW.worker_mb_id,
+          case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+          case
+            when WPMC.support_gps = 1 then
+            IFNULL((
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+            ), 0)
+            when WPMC.support_ble = 1 then
+            IFNULL((
+              SELECT 1
+              FROM sensor_log_recent SLR
+              INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+              WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+              AND SLR.slr_datetime  >= DATE(NOW())
+              AND SLR.in_out_type IN ( 0, 1 )
+              LIMIT 1
+            ), 0)
+            else 0
+          end as active_worker,
+          IFNULL((
+            select 1
+            from sensor_log_recent SLR
+            inner join sensor_info SI on SLR.si_idx = SI.si_idx
+            where SLR.wp_id = WPW.wp_id and SLR.mb_id = WPW.worker_mb_id
+            AND SI.si_type = '위험지역'
+            AND SLR.slr_datetime >= DATE(NOW())
+            AND SLR.slr_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+            AND SLR.in_out_type IN ( 0, 1 )
+            LIMIT 1
+          ), 0) as danger_worker,
+          case when
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+              <property name="aliasDeviceStatus" value="WDS"/>
+            </include>
+            then 1 else 0
+          end as use_app_worker
+        from work_place WP
+        inner join work_place_worker WPW ON WP.wp_id = WPW.wp_id
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+        where WPW.wpw_out = 0
+        AND exists (
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+      ) WPW
+      group by WPW.wp_id
+    ) TOT
+  </select>
+  
+
+  <select id="findTotalWorkplaceState2"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccStateIndicator2Vo">
+    select
+      IFNULL(sum(TOT.total_manager_count), 0) as total_manager_count,
+      IFNULL(sum(TOT.total_worker_count), 0) as total_worker_count,
+      IFNULL(sum(TOT.active_worker_count), 0) as active_worker_count,
+      IFNULL(sum(TOT.coop_count), 0) as coop_count,
+      IFNULL(sum(TOT.danger_worker_count), 0) as danger_worker_count,
+      IFNULL(sum(TOT.equipment_count) , 0) as equipment_count,
+      IFNULL(sum(TOT.danger_msg_count), 0) as danger_msg_count
+    from  (
+      select
+        WPW.wp_id,
+        IFNULL( (
+          select count(*)
+          from attendance_book ADB
+          WHERE ADB.wp_id = WPW.wp_id
+          AND ADB.working_day = DATE_FORMAT(NOW(),'%Y%m%d')
+          AND ADB.mb_level IS NOT NULL AND ADB.mb_level != 2
+        ), 0 ) as total_manager_count,
+        count(distinct WPW.worker_mb_id) as total_worker_count,
+        sum( active_worker ) as active_worker_count,
+        sum( WPW.danger_worker ) as danger_worker_count,
+        IFNULL( ( select count(*) from work_place_coop WPC where WPC.wp_id = WPW.wp_id ), 0 ) AS coop_count,
+        IFNULL( (
+          select count(*)
+          from work_equipment_info WEI
+          INNER JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+          LEFT JOIN icon_code IC ON IC.icon_type = EC.icon_type
+          WHERE WEI.wp_id = WPW.wp_id
+          AND (
+            WEI.ope_type = 0
+            OR (
+              WEI.ope_type = 1 AND WEI.ope_start <![CDATA[<=]]> NOW() AND WEI.ope_end <![CDATA[>=]]> NOW()
+            )
+          )
+        ), 0 ) as equipment_count,
+        IFNULL( (
+          select count(*)
+          from admin_msg_info AMI
+          inner join admin_msg_type AMT ON AMT.msg_type = AMI.msg_type
+          where AMI.wp_id = WPW.wp_id
+          AND AMI.upt_datetime >= DATE(NOW())
+        ), 0 ) as danger_msg_count
+      from  (
+        SELECT
+          WPW.wp_id,
+          WPW.wp_name,
+          WPW.coop_mb_id,
+          WPW.worker_mb_id,
+          WPW.work_section_b,
+          WPW.temperature,
+          WPW.commute_type,
+          WPW.measure_time,
+          case when WPW.close_reason = 1 then 1 else 0 end as active_worker,
+          IFNULL((
+            select 1
+            from sensor_log_recent SLR
+            inner join sensor_info SI on SLR.si_idx = SI.si_idx
+            where SLR.wp_id = WPW.wp_id and SLR.mb_id = WPW.worker_mb_id
+            AND SI.si_type = '위험지역'
+            AND SLR.slr_datetime >= DATE(NOW())
+            AND SLR.slr_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+            AND SLR.in_out_type IN ( 0, 1 )
+            LIMIT 1
+          ), 0) as danger_worker
+        FROM (
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWorkerDao.monitoringWorkerWithActiveInfoSql" />
+          inner join work_place WP ON WP.wp_id = RES.wp_id
+          WHERE <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+            <property name="alias" value="WP"/>
+          </include>
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+          </include>
+        ) WPW
+      ) WPW
+      group by WPW.wp_id
+    ) TOT
+  </select>
+  
+  
+  <!-- 통합관제 지역별 현장/협력사/출역인원 수 -->
+  <select id="findHiccRegionStat"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccRegionStatVo">
+    select
+      HIG.hrg_no,
+      HIG.hrg_name,
+      IFNULL( (
+        select count(*)
+        from work_place WP
+        inner join work_place_address WPA2 on WPA2.wp_id = WP.wp_id
+        inner join hicc_region HIR2 on WPA2.sigungu_code like concat( HIR2.sido_cd, '%')
+        WHERE HIG.hrg_no = HIR2.hrg_no
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+      ), 0) as total_workplace_count,
+      IFNULL((
+        SELECT
+            count( distinct WPC.coop_mb_id )
+        from work_place_coop WPC
+        inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+        inner join work_place WP ON WPC.wp_id = WP.wp_id
+        inner join work_place_address WPA2 on WP.wp_id = WPA2.wp_id
+        inner join hicc_region HIR2 ON WPA2.sigungu_code like concat( HIR2.sido_cd, '%')
+        where 'x' = 'x'
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+        AND HIR2.hrg_no = HIG.hrg_no
+      ), 0) as total_coop_count,
+      IFNULL( SUM(WPW.worker_count), 0 ) as total_worker_count
+    from  hicc_info HICC
+    inner join hicc_integ_group HIG ON HICC.hicc_no = HIG.hicc_no
+    inner join hicc_region HIR on HIG.hrg_no = HIR.hrg_no
+    left join work_place_address WPA on WPA.sigungu_code like concat( HIR.sido_cd, '%')
+    left join (
+      SELECT
+        WPW.wp_id,
+        count( WPW.worker_mb_id ) as worker_count
+      FROM (
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWorkerDao.monitoringWorkerWithActiveInfoSql" />
+        inner join work_place WP ON WP.wp_id = RES.wp_id
+        WHERE <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+      ) WPW
+      group by WPW.wp_id
+    ) WPW ON WPA.wp_id = WPW.wp_id
+    WHERE HICC.hicc_no = #{ hiccNo }
+    group by HIG.hrg_no
+  </select>
+  
+  <resultMap id="NationWideMap" type="kr.co.hulan.aas.mvc.api.hicc.vo.main.HiccWorkplaceForIntegGroupVo" autoMapping="true">
+    <id property="wpId" column="wp_id"/>
+    <association
+      property="weather"
+      columnPrefix="weather_"
+      notNullColumn="wp_id"
+      javaType="kr.co.hulan.aas.mvc.api.hicc.vo.main.HiccWeatherInfoVo"
+      autoMapping="true">
+    </association>
+  </resultMap>
+  
+  <!--
+    통합 관제 메인 컴포넌트 현장 리스트 정보
+  -->
+  <select id="findWorkplaceListForNationWide"
+    parameterType="map"
+    resultMap="NationWideMap">
+    select
+      HIG.hrg_no,
+      HIG.hrg_name,
+      WP.wp_id,
+      WP.wp_name,
+      WP.wp_start_date,
+      WP.wp_end_date,
+      WP.construct_scale,
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWeatherDao.weatherColumns">
+        <property name="alias" value="WEATHER"/>
+        <property name="alias_column" value="weather_"/>
+      </include>,
+      AE.pm10_value as weather_pm10_value,
+      AE.pm25_value as weather_pm25_value,
+      IFNULL(WPW.total_worker_count, 0) as total_worker_count,
+      IFNULL(WPW.active_worker_count, 0) as active_worker_count,
+      IFNULL( (
+        select count(*)
+        from admin_msg_info AMI
+        inner join admin_msg_type AMT ON AMT.msg_type = AMI.msg_type
+        where AMI.wp_id = WP.wp_id
+        AND AMI.upt_datetime >= DATE(NOW())
+      ), 0 ) as danger_msg_count
+    from work_place WP
+    inner join work_place_address WPA on WP.wp_id = WPA.wp_id
+    left join work_place_weather WEATHER ON WEATHER.wp_id = WP.wp_id
+    LEFT JOIN air_environment AE on WP.station_name = AE.station_name
+    left join (
+      select
+        WPW.wp_id,
+        count(distinct WPW.worker_mb_id) as total_worker_count,
+        IFNULL( sum(
+          case
+            when WPMC.support_gps = 1 then
+              IFNULL((
+                SELECT 1
+                FROM gps_location GL
+                WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+                and GL.mb_id is not null
+                AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+                LIMIT 1
+              ), 0)
+            when WPMC.support_ble = 1 then
+              case
+                when
+                  <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+                    <property name="aliasDeviceStatus" value="WDS"/>
+                  </include>
+                  then
+                    IFNULL((
+                      SELECT 1
+                      FROM sensor_log_recent SLR
+                      INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+                      WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+                      AND SLR.slr_datetime  >= DATE(NOW())
+                      AND SLR.in_out_type IN ( 0, 1 )
+                      LIMIT 1
+                    ), 0)
+                else 0
+              end
+            else 0
+          end
+        ), 0 ) as active_worker_count
+      from work_place_worker WPW
+      inner join work_place WP ON WP.wp_id = WPW.wp_id
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+      inner join attendance_book ATDB ON ATDB.wp_id = WPW.wp_id
+         AND ATDB.mb_id = WPW.worker_mb_id
+         AND ATDB.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      where WPW.wpw_out = 0
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      group by WP.wp_id
+    ) WPW ON WPW.wp_id = WP.wp_id,
+    hicc_info HICC
+    inner join hicc_region HIR on HICC.hicc_no = HIR.hicc_no
+    inner join hicc_integ_group HIG on HIR.hrg_no = HIG.hrg_no
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    and HICC.hicc_no = #{hiccNo}
+    and WPA.sigungu_code like concat( HIR.sido_cd, '%')
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    order by HIG.hrg_no, WP.wp_name
+  </select>
+  
+  
+</mapper>

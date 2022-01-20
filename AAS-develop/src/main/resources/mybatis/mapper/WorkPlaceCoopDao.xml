@@ -1,0 +1,798 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceCoopDao">
+  
+  <!--
+      현장관리 > 협력사 편입
+      근태관리 >  협력사별현황
+  -->
+  <select id="findSafetySituationListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCoopDto">
+    SELECT
+      WPC.wpc_id,
+      WPC.cc_id,
+      WPC.cc_name,
+      WPC.coop_mb_id,
+      WPC.coop_mb_name,
+      WPC.wp_id,
+      WPC.wp_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      WPC.wp_sido,
+      WPC.wp_gugun,
+      WPC.wp_addr,
+      IFNULL((
+        select count(*)
+        from work_place_worker WPW
+        where WPW.wp_id = WPC.wp_id
+        AND WPW.coop_mb_id = WPC.coop_mb_id
+      ), 0) AS worker_count,
+      IFNULL((
+        select count(*)
+        from attendance_book ADB
+        where ADB.wp_id = WPC.wp_id
+        AND ADB.coop_mb_id = WPC.coop_mb_id
+        AND ADB.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      ), 0) AS worker_today_count,
+      IFNULL((
+        select count(*)
+        from attendance_book ADB
+        where ADB.wp_id = WPC.wp_id
+        AND ADB.coop_mb_id = WPC.coop_mb_id
+        AND ADB.working_day >= DATE_FORMAT( DATE_SUB(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), INTERVAL 1 MONTH) , '%Y%m%d')
+        AND ADB.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY) , '%Y%m%d')
+      ), 0) AS worker_month_count,
+      IFNULL((
+        select count(*)
+        from attendance_book ADB
+        where ADB.wp_id = WPC.wp_id
+        AND ADB.coop_mb_id = WPC.coop_mb_id
+        <if test='startDate != null  '>
+          AND ADB.working_day >= DATE_FORMAT( #{startDate}, '%Y%m%d')
+        </if>
+        <if test='endDate != null  '>
+          AND ADB.working_day <![CDATA[<=]]> DATE_FORMAT( #{endDate}, '%Y%m%d')
+        </if>
+      ), 0) AS worker_total_count
+    FROM (
+      SELECT
+        WPC.wpc_id,
+        WPC.wp_id,
+        CC.cc_id,
+        CC.cc_name,
+        WPC.coop_mb_id,
+        G5MCOOP.mb_name as coop_mb_name,
+        WP.wp_name,
+        WPC.work_section_a,
+        WPC.wpc_work,
+        WP.wp_sido,
+        WP.wp_gugun,
+        WP.wp_addr
+      FROM work_place_coop WPC
+      INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+      INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+      INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+      WHERE 'x' = 'x'
+      <if test='COMPLEX != null and COMPLEX != "" '>
+        AND (
+          G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+          OR
+          WPC.wpc_work like concat( '%', #{COMPLEX} ,'%')
+        )
+      </if>
+      <if test='coopMbName != null and coopMbName != "" '>
+        AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+      </if>
+      <if test='wpcWork != null and wpcWork != "" '>
+        AND WPC.wpc_work like concat( '%', #{wpcWork} ,'%')
+      </if>
+      <if test='ccId != null and ccId != "" '>
+        AND WPC.cc_id = #{ccId}
+      </if>
+      <if test='wpId != null and wpId != "" '>
+        AND WPC.wp_id = #{wpId}
+      </if>
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPC.coop_mb_id = #{coopMbId}
+      </if>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+        <property name="aliasWp" value="WP"/>
+        <property name="aliasWpAndCoop" value="WPC"/>
+      </include>
+      ORDER BY WPC.wpc_datetime DESC
+      <if test="startRow != null and pageSize != null ">
+        LIMIT #{startRow}, #{pageSize}
+      </if>
+    ) WPC
+  </select>
+  
+  <!--
+      현장관리 > 협력사 편입
+      근태관리 >  협력사별현황
+  -->
+  <select id="findSafetySituationListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT COUNT(*)
+    FROM work_place_coop WPC
+    INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WPC.wpc_work like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='wpcWork != null and wpcWork != "" '>
+      AND WPC.wpc_work like concat( '%', #{wpcWork} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND WPC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WPC.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+  </select>
+  
+  <select id="findInfo"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCoopDto">
+    SELECT
+      WPC.wpc_id,
+      WPC.wp_id,
+      WPC.coop_mb_id,
+      G5MCOOP.mb_name as coop_mb_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      WPC.wpc_work,
+      CC.cc_id,
+      CC.cc_name,
+      WP.wp_name,
+      WP.wp_sido,
+      WP.wp_gugun,
+      WP.wp_addr
+    FROM work_place_coop WPC
+           INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+           INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+           INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+           INNER JOIN construction_site CS ON CS.wp_id = WPC.wp_id AND CS.cc_id = WPC.cc_id
+    WHERE WPC.wpc_id = #{wpcId}
+  </select>
+  
+  <!-- 근태관리 > 안전조회미참석자 -->
+  <select id="findEducationNonAttendeeSituationListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCoopDto">
+    SELECT
+      WPC.wpc_id,
+      CC.cc_id,
+      CC.cc_name,
+      G5MCOOP.mb_id as coop_mb_id,
+      G5MCOOP.mb_name as coop_mb_name,
+      WP.wp_id,
+      WP.wp_name,
+      DATE(#{targetDate}) AS target_date,
+      IFNULL((
+        select count(*)
+        from attendance_book ADB
+        INNER JOIN work_place_worker WPW ON WPW.wp_id = ADB.wp_id and WPW.coop_mb_id = ADB.coop_mb_id and WPW.worker_mb_id = ADB.mb_id
+        where ADB.wp_id = WPC.wp_id
+        AND ADB.coop_mb_id = WPC.coop_mb_id
+        AND ADB.working_day = DATE_FORMAT(#{targetDate}, '%Y%m%d')
+      ), 0) AS worker_today_count,
+      IFNULL((
+        select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+        from sensor_log_inout SLI
+        INNER JOIN work_place_worker WPW ON WPW.wp_id = SLI.wp_id and WPW.coop_mb_id = SLI.coop_mb_id and WPW.worker_mb_id = SLI.mb_id
+        WHERE SLI.wp_id = WPC.wp_id
+        AND SLI.coop_mb_id = WPC.coop_mb_id
+        AND SLI.si_type = '안전조회'
+        AND SLI.sli_in_datetime >= DATE(#{targetDate})
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+        AND TIME(SLI.sli_in_datetime) <![CDATA[<]]> WP.wp_edutime_end
+        AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[ > ]]>  WP.wp_edutime_start
+      ), 0) AS worker_safety_education_count
+    FROM work_place_coop WPC
+    INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+    INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND G5MCOOP.mb_id = #{coopMbId}
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+    ORDER BY WPC.wpc_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 근태관리 > 안전조회미참석자 -->
+  <select id="findEducationNonAttendeeSituationListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT COUNT(*)
+    FROM work_place_coop WPC
+    INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+    INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND G5MCOOP.mb_id = #{coopMbId}
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+  </select>
+
+  
+  <select id="findByWpIdAndCoopMbId"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCoopDto">
+    SELECT
+      WPC.wpc_id,
+      WPC.wp_id,
+      WPC.wp_name,
+      WPC.coop_mb_id,
+      WPC.coop_mb_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a
+    FROM work_place_coop WPC
+           INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    WHERE WPC.wp_id = #{wpId}
+      AND WPC.coop_mb_id = #{coopMbId}
+  </select>
+  
+  
+  <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCoopDto">
+    INSERT INTO work_place_coop (
+                                 wpc_id
+                                ,wp_id
+                                ,wp_name
+                                ,coop_mb_id
+                                ,coop_mb_name
+                                ,work_section_a
+                                ,wpc_work
+                                ,wpc_datetime
+    )
+    VALUES (
+             #{wpcId}
+           , #{wpId}
+           , #{wpName}
+           , #{coopMbId}
+           , #{coopMbName}
+           , #{workSectionA}
+           , #{wpcWork}
+           , NOW()
+           );
+  </insert>
+  
+  <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCoopDto">
+    UPDATE work_place_coop
+    SET
+      wpc_work = #{wpcWork}
+    WHERE wpc_id = #{wpcId}
+  </update>
+  
+  
+  <!--
+  통합 관제 전체 협력사 리스트 정보
+  -->
+  <select id="findHiccCooperativeList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.coop.CooperativeVo">
+    select
+      G5M.mb_id as coop_mb_id,
+      G5M.mb_name as coop_mb_name
+    from work_place_coop WPC
+    inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+    inner join work_place WP ON WPC.wp_id = WP.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    group by G5M.mb_id, G5M.mb_name
+    order by G5M.mb_name ASC
+  </select>
+  
+  <!--
+  통합 관제 전체 협력사 수 정보
+  -->
+  <select id="countHiccWorkplaceCoopList"
+    parameterType="map"
+    resultType="long">
+    select count(distinct WPC.coop_mb_id)
+    from work_place_coop WPC
+    inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+    inner join work_place WP ON WPC.wp_id = WP.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+  
+  <!--
+  통합 관제 협력사 현황 정보
+  -->
+  <select id="findCooperativeState"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.coop.CooperativeStateVo">
+    select
+      IFNULL((
+        select count(distinct WPC.coop_mb_id)
+        from work_place_coop WPC
+        inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+        inner join work_place WP ON WPC.wp_id = WP.wp_id
+          AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+            <property name="alias" value="WP"/>
+          </include>
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+          </include>
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+        where WP.wp_end_status = 0
+      ), 0) as coop_count,
+      IFNULL((
+        select count(distinct WPC.coop_mb_id)
+        from work_place_coop WPC
+        inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+        inner join work_place WP ON WPC.wp_id = WP.wp_id
+          AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+            <property name="alias" value="WP"/>
+          </include>
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+          </include>
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+        inner join work_place_worker WPW ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id AND WPW.wpw_out = 0
+        inner join attendance_book ATDB ON ATDB.wp_id = WPW.wp_id
+                                       AND ATDB.mb_id = WPW.worker_mb_id
+                                       AND ATDB.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      ), 0) as active_coop_count,
+      IFNULL((
+        select count(distinct WPC.coop_mb_id)
+        from work_place_coop WPC
+        inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+        inner join work_place WP ON WPC.wp_id = WP.wp_id
+          AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+            <property name="alias" value="WP"/>
+          </include>
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+          </include>
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+        inner join work_place_worker WPW ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id AND WPW.wpw_out = 0
+        where 'x' = 'x'
+        AND EXISTS(
+          select 1
+          FROM attendance_book ATDB WHERE ATDB.wp_id = WPW.wp_id
+          AND ATDB.mb_id = WPW.worker_mb_id
+          AND ATDB.working_day >= DATE_FORMAT(DATE_ADD(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), INTERVAL - 1 MONTH), '%Y%m%d')
+          AND ATDB.working_day <![CDATA[<]]> DATE_FORMAT(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), '%Y%m%d')
+          limit 1
+        )
+      ), 0) as active_month_coop_count
+  </select>
+  
+  
+  <!-- 협력사의 기본 공종 기준
+  <select id="findCooperativeSectionStatList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.coop.SectionStatVo">
+    select
+      RES.section_cd
+      ,RES.section_name
+      ,RES.coop_count
+    from (
+      select
+        WS.section_cd,
+        WS.section_name,
+        count( MB.mb_id ) as coop_count
+      from work_section WS
+      left join (
+        select G5M.mb_id, G5M.work_section_a
+        from g5_member G5M
+        where G5M.mb_level = 3
+        and exists (
+          select 1
+          from work_place_coop WPC
+          inner join work_place WP ON WPC.wp_id = WP.wp_id
+          where WPC.coop_mb_id = G5M.mb_id
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+          </include>
+          limit 1
+        )
+      ) MB ON MB.work_section_a = WS.section_cd
+      where WS.parent_section_cd is null
+      group by WS.section_cd
+    ) RES
+    order by coop_count desc
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  -->
+  
+  <!-- 협력사의 편입 공종 기준 -->
+  <select id="findCooperativeSectionStatList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.coop.SectionStatVo">
+    select
+      WS.section_cd,
+      WS.section_name,
+      count( distinct WPC.coop_mb_id ) as coop_count
+    from work_place_coop WPC
+    inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+    inner join work_place WP ON WPC.wp_id = WP.wp_id
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+    inner join work_section WS ON WS.section_cd = WPC.work_section_a
+    where WS.parent_section_cd is null
+    <if test=' wpId != null and wpId != "" '>
+      AND WPC.wp_id = #{wpId}
+    </if>
+    group by WS.section_cd
+    order by coop_count DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!--
+    통합 관제 협력사 출역현황 리스트 정보
+  -->
+  <!--
+  <select id="findCooperativeAttendanceStatList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.coop.CooperativeAttendanceStatVo">
+    select
+      G5M.mb_id as coop_mb_id
+      ,G5M.mb_name as coop_mb_name
+      ,WS.section_cd
+      ,WS.section_name
+      ,RES.workplace_count
+      ,RES.total_worker_count
+      ,RES.active_worker_count
+    from (
+      select
+        WPW.coop_mb_id,
+        count(distinct WPW.wp_id) as workplace_count,
+        count(distinct WPW.worker_mb_id) as total_worker_count,
+        sum( case when WPW.need_device_check = 1 then WPW.use_app_worker * WPW.active_worker else WPW.active_worker end ) as active_worker_count
+      from (
+        select
+        WPW.wp_id,
+        WPW.coop_mb_id,
+        WPW.worker_mb_id,
+        case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+        case
+          when WPMC.support_gps = 1 then
+            IFNULL((
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+            ), 0)
+          when WPMC.support_ble = 1 then
+            IFNULL((
+              SELECT 1
+              FROM sensor_log_recent SLR
+              INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+              WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+              AND SLR.slr_datetime  >= DATE(NOW())
+              AND SLR.in_out_type IN ( 0, 1 )
+              LIMIT 1
+            ), 0)
+          else 0
+        end as active_worker,
+        case when
+          <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+            <property name="aliasDeviceStatus" value="WDS"/>
+          </include>
+          then 1 else 0
+        end as use_app_worker
+        from work_place_worker WPW
+        inner join work_place WP ON WP.wp_id = WPW.wp_id
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+        where WP.wp_end_status = 0
+        AND WPW.wpw_out = 0
+        AND exists (
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+      ) WPW
+      group by WPW.coop_mb_id
+    ) RES
+    inner join g5_member G5M ON G5M.mb_id = RES.coop_mb_id
+    left join work_section WS ON G5M.work_section_a = WS.section_cd
+    where 'x' = 'x'
+    <if test="coopMbName != null and coopMbName != '' ">
+      AND G5M.mb_name like concat( '%', #{coopMbName}, '%' )
+    </if>
+    <if test="sectionCd != null and sectionCd != '' ">
+      AND WS.section_cd = #{sectionCd}
+    </if>
+    order by workplace_count desc, coop_mb_name, section_cd
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  -->
+  
+  <select id="findCooperativeAttendanceStatList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.coop.CooperativeAttendanceStatVo">
+    select
+        WPC.coop_mb_id,
+        G5M.mb_name as coop_mb_name,
+        WS.section_cd,
+        IFNULL(WS.section_name, '') as section_name,
+        count( distinct WPC.wp_id ) as workplace_count,
+        sum( case when ATDB.mb_id is not null then 1 else 0 end ) as total_worker_count,
+        sum( IFNULL((
+            case
+              when WPMC.support_gps = 1 then
+                (
+                  SELECT 1
+                  FROM gps_location GL
+                  WHERE ATDB.mb_id = GL.mb_id AND ATDB.wp_id = GL.wp_id
+                  and GL.mb_id is not null
+                  AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+                  LIMIT 1
+                )
+              when WPMC.support_ble = 1 then
+                case
+                  when
+                    <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+                      <property name="aliasDeviceStatus" value="WDS"/>
+                    </include>
+                  then
+                    (
+                      SELECT 1
+                      FROM sensor_log_recent SLR
+                      INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+                      WHERE ATDB.mb_id = SLR.mb_id AND ATDB.wp_id = SLR.wp_id
+                      AND SLR.slr_datetime  >= DATE(NOW())
+                      AND SLR.in_out_type IN ( 0, 1 )
+                      LIMIT 1
+                    )
+                  else 0
+                end
+              else 0
+            end
+        ),0) ) as active_worker_count
+    from work_place_coop WPC
+    inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+    inner join work_place WP ON WPC.wp_id = WP.wp_id
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+    left join work_place_worker WPW ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id AND WPW.wpw_out = 0
+    left join attendance_book ATDB ON ATDB.wp_id = WPW.wp_id
+                                   AND ATDB.mb_id = WPW.worker_mb_id
+                                   AND ATDB.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+    left join work_section WS ON G5M.work_section_a = WS.section_cd
+    left join worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+    where WP.wp_end_status = 0
+    <if test="coopMbName != null and coopMbName != '' ">
+      AND G5M.mb_name like concat( '%', #{coopMbName}, '%' )
+    </if>
+    <if test="sectionCd != null and sectionCd != '' ">
+      AND WS.section_cd = #{sectionCd}
+    </if>
+    <if test=' coopMbIdList != null '>
+      AND WPC.coop_mb_id IN
+      <foreach collection="coopMbIdList" item="item" index="index" separator="," open="(" close=")">
+        #{item}
+      </foreach>
+    </if>
+    <if test=' sectionCdList != null '>
+      AND WS.section_cd IN
+      <foreach collection="sectionCdList" item="item" index="index" separator="," open="(" close=")">
+        #{item}
+      </foreach>
+    </if>
+    group by WPC.coop_mb_id, G5M.mb_name
+    ORDER BY <choose>
+    <when test='ordBy != null and ordBy == 1'>coop_mb_name </when>
+    <when test='ordBy != null and ordBy == 2'>section_name </when>
+    <when test='ordBy != null and ordBy == 3'>workplace_count </when>
+    <when test='ordBy != null and ordBy == 4'>total_worker_count </when>
+    <when test='ordBy != null and ordBy == 5'>active_worker_count </when>
+    <otherwise>workplace_count</otherwise>
+  </choose>
+    <choose>
+      <when test='ordAsc != null and ordAsc == 1'> ASC</when>
+      <otherwise> DESC</otherwise>
+    </choose>
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="countCooperativeAttendanceStatList"
+    parameterType="map"
+    resultType="long">
+    select count(*) from (
+      select
+         WPC.coop_mb_id, G5M.mb_name
+      from work_place_coop WPC
+      inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+      inner join work_place WP ON WPC.wp_id = WP.wp_id
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+      left join work_section WS ON G5M.work_section_a = WS.section_cd
+      where 'x' = 'x'
+      <if test="coopMbName != null and coopMbName != '' ">
+        AND G5M.mb_name like concat( '%', #{coopMbName}, '%' )
+      </if>
+      <if test="sectionCd != null and sectionCd != '' ">
+        AND WS.section_cd = #{sectionCd}
+      </if>
+      <if test=' coopMbIdList != null '>
+        AND WPC.coop_mb_id IN
+        <foreach collection="coopMbIdList" item="item" index="index" separator="," open="(" close=")">
+          #{item}
+        </foreach>
+      </if>
+      <if test=' sectionCdList != null '>
+        AND WS.section_cd IN
+        <foreach collection="sectionCdList" item="item" index="index" separator="," open="(" close=")">
+          #{item}
+        </foreach>
+      </if>
+      group by WPC.coop_mb_id, G5M.mb_name
+    ) RES
+  </select>
+  
+  
+  <!--
+    통합 관제 협력사 현장별 출역 현황 리스트
+  -->
+  <select id="findWorkplaceAttendanceStatListByCoop"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceAttendanceStatVo">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      IFNULL((
+        select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPC.wp_id
+        AND SLI.coop_mb_id = WPC.coop_mb_id
+        AND SLI.sli_in_si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+      ), 0) AS worker_today_count,
+      IFNULL((
+        select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPC.wp_id
+        AND SLI.coop_mb_id = WPC.coop_mb_id
+        AND SLI.sli_in_si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE( DATE_ADD(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), INTERVAL - 1 MONTH) )
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE( DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY) )
+      ), 0) AS worker_month_count,
+      IFNULL((
+        select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPC.wp_id
+        AND SLI.coop_mb_id = WPC.coop_mb_id
+        AND SLI.sli_in_si_type = '출입용'
+      ), 0) AS total_worker_count
+    from work_place_coop WPC
+    inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+    inner join work_place WP ON WP.wp_id = WPC.wp_id
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+    where WPC.coop_mb_id = #{coopMbId}
+    order by wp_name
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="countWorkplaceAttendanceStatListByCoop"
+    parameterType="map"
+    resultType="long">
+    select
+      count(*)
+    from work_place_coop WPC
+    inner join g5_member G5M ON WPC.coop_mb_id = G5M.mb_id AND G5M.mb_level = 3
+    inner join work_place WP ON WP.wp_id = WPC.wp_id
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPC.wp_id
+    where WPC.coop_mb_id = #{coopMbId}
+  </select>
+
+</mapper>

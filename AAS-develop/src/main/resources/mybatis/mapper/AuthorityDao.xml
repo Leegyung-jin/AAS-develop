@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.AuthorityDao">
+  
+  <!-- 전체 및 검색된 권한 목록 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityDto">
+    SELECT
+      AUTH.authority_id
+      ,AUTH.authority_name
+      ,AUTH.description
+      ,AUTH.create_date
+      ,AUTH.creator
+      ,AUTH.update_date
+      ,AUTH.updater
+    FROM authority AUTH
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      AUTH.authority_id like concat( '%', #{COMPLEX} ,'%')
+      OR
+      AUTH.authority_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='authorityId != null and authorityId != "" '>
+      AND AUTH.authority_id like concat( '%', #{authorityId} ,'%')
+    </if>
+    <if test='authorityName != null and authorityName != "" '>
+      AND AUTH.authority_name like concat( '%', #{authorityName} ,'%')
+    </if>
+    ORDER BY AUTH.authority_id DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 검색된 권한 개수 -->
+  <select id="countListByCondition"
+          parameterType="map"
+          resultType="Integer">
+    SELECT
+    count(*) AS CNT
+    FROM authority AUTH
+    WHERE   'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      AUTH.authority_id like concat( '%', #{COMPLEX} ,'%')
+      OR
+      AUTH.authority_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='authorityId != null and authorityId != "" '>
+      AND MBLV.authority_id like concat( '%', #{authorityId} ,'%')
+    </if>
+    <if test='authorityName != null and authorityName != "" '>
+      AND MBLV.authority_name like concat( '%', #{authorityName} ,'%')
+    </if>
+  </select>
+
+  <!-- 권한 상세 정보 -->
+  <select id="findInfo"
+          parameterType="String"
+          resultType="kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityDto">
+    SELECT
+      AUTH.authority_id
+         ,AUTH.authority_name
+         ,AUTH.description
+         ,AUTH.create_date
+         ,AUTH.creator
+         ,AUTH.update_date
+         ,AUTH.updater
+    FROM authority AUTH
+    WHERE AUTH.authority_id = #{authorityId}
+  </select>
+
+  <!-- 권한에 포함된 등급 정보  -->
+  <select id="findSelectedLevelList"
+          parameterType="map"
+          resultType="java.lang.String">
+    SELECT MBLV.mb_level
+    FROM    member_level MBLV
+              INNER JOIN authority_level AULV ON MBLV.mb_level = AULV.mb_level
+              INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id
+    WHERE  AUTH.authority_id = #{authorityId}
+  </select>
+
+  <!-- 권한을 사용중인 사용자 정보  authorityId가 없으면 아무것도 검색되지 않아야 한다.-->
+  <select id="findUsedAuthorityUserList"
+          parameterType="string"
+          resultType="kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityUserDto">
+    SELECT MB.mb_id, MB.mb_name, MBLV.mb_level, MBLV.mb_level_name, MBLV.updater, MBLV.update_date, AULV.authority_id
+    FROM   g5_member MB
+    INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
+    INNER JOIN authority_level AULV ON MBLV.mb_level = AULV.mb_level
+    INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id
+    WHERE  'x' = 'x'
+    <if test='value != null and value != "" '>
+      AND AUTH.authority_id = #{value}
+    </if>
+<!--    <if test='authorityId != null and authorityId != "" '>-->
+<!--      AND AUTH.authority_id = #{authorityId}-->
+<!--    </if>-->
+  </select>
+
+  <!-- 검색된 권한 개수 -->
+  <select id="countfindUsedAuthorityUserList"
+          parameterType="map"
+          resultType="Integer">
+    SELECT
+    count(*) AS CNT
+    FROM g5_member MB
+    INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
+    INNER JOIN authority_level AULV ON MBLV.mb_level = AULV.mb_level
+    INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id
+    WHERE  'x' = 'x'
+    <if test='value != null and value != "" '>
+      AND AUTH.authority_id = #{value}
+    </if>
+  </select>
+</mapper>

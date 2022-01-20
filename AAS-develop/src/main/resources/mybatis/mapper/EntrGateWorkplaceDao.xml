@@ -1,0 +1,1074 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.EntrGateWorkplaceDao">
+  
+  <sql id="entrGateWorkplaceColumn">
+    ${alias}.wp_id as ${alias_column}wp_id
+    ,${alias}.account_id as ${alias_column}account_id
+    ,${alias}.mapping_cd as ${alias_column}mapping_cd
+    ,${alias}.status as ${alias_column}status
+    ,${alias}.gate_type as ${alias_column}gate_type
+    ,${alias}.admin_url as ${alias_column}admin_url
+    ,${alias}.admin_id as ${alias_column}admin_id
+    ,${alias}.admin_pwd as ${alias_column}admin_pwd
+    ,${alias}.creator  as ${alias_column}creator
+    ,${alias}.create_date  as ${alias_column}create_date
+    ,${alias}.updater  as ${alias_column}updater
+    ,${alias}.update_date  as ${alias_column}update_date
+  </sql>
+  
+  <!-- 출입게이트 현장 정보 리스트 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.entergate.vo.EntrGateWorkplaceVo">
+    SELECT
+      <include refid="entrGateWorkplaceColumn"><property name="alias" value="EGW"/><property name="alias_column" value=""/></include>
+      ,EGA.account_name
+      ,WP.wp_name
+    FROM entr_gate_workplace EGW
+    INNER JOIN entr_gate_account EGA ON EGA.account_id = EGW.account_id
+    INNER JOIN work_place WP ON WP.wp_id = EGW.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        EGA.account_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like  concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='accountName != null and accountName != "" '>
+      AND EGA.account_name like  concat( '%', #{accountName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like  concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='accountId != null and accountId != "" '>
+      AND EGA.account_id = #{accountId}
+    </if>
+    ORDER BY EGW.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 출입게이트 현장 정보 리스트 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT COUNT(*)
+    FROM entr_gate_workplace EGW
+    INNER JOIN entr_gate_account EGA ON EGA.account_id = EGW.account_id
+    INNER JOIN work_place WP ON WP.wp_id = EGW.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        EGA.account_name like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like  concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='accountName != null and accountName != "" '>
+      AND EGA.account_name like  concat( '%', #{accountName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like  concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='accountId != null and accountId != "" '>
+      AND EGA.account_id = #{accountId}
+    </if>
+  </select>
+  
+  <!-- 현장 출입게이트 연동 정보 상세 -->
+  <select id="findInfo"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.entergate.vo.EntrGateWorkplaceVo">
+    SELECT
+      <include refid="entrGateWorkplaceColumn"><property name="alias" value="EGW"/><property name="alias_column" value=""/></include>
+      ,EGA.account_name
+      ,WP.wp_name
+    FROM entr_gate_workplace EGW
+    INNER JOIN entr_gate_account EGA ON EGA.account_id = EGW.account_id
+    INNER JOIN work_place WP ON WP.wp_id = EGW.wp_id
+    WHERE EGW.wp_id = #{wpId}
+  </select>
+  
+  <!-- 현장 출입게이트 근로자 현황 통계 -->
+  <select id="findCurrentGateStat"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.EnterGateStatInfo">
+    select
+      WPW.wp_id,
+      count(distinct WPW.worker_mb_id) as attendance_count,
+      sum( case when WPW.need_device_check = 1 then WPW.use_app_worker * WPW.active_worker else WPW.active_worker end ) as residual_count,
+      sum( case when WPW.use_app_worker = 1 then 0 else 1 end  ) as not_use_app_count
+    FROM (
+      select
+          WPW.wp_id,
+          WPW.worker_mb_id,
+          ATBK.work_status,
+          case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+          case
+              when WPMC.support_gps = 1 then
+                  IFNULL((
+                             SELECT 1
+                             FROM gps_location GL
+                             WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+                               and GL.mb_id is not null
+                               AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+                             LIMIT 1
+                         ), 0)
+              when WPMC.support_ble = 1 then
+                  IFNULL((
+                             SELECT 1
+                             FROM sensor_log_recent SLR
+                                      INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+                             WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+                               AND SLR.slr_datetime  >= DATE(NOW())
+                               AND SLR.in_out_type IN ( 0, 1 )
+                             LIMIT 1
+                         ), 0)
+              else 0
+              end as active_worker,
+          case when
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+              <property name="aliasDeviceStatus" value="WDS"/>
+            </include>
+            then 1 else 0
+          end as use_app_worker
+      from work_place WP
+               inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+               inner join attendance_book ATBK ON ATBK.wp_id = WP.wp_id
+               inner join work_place_worker WPW ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+               inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id
+               LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      where WP.wp_end_status = 0
+        AND WP.wp_id = #{wpId}
+        AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+        <choose>
+          <when test='workInMethods != null and !workInMethods.empty '>
+            AND ATBK.work_in_method IN <foreach collection="workInMethods" item="workInMethod" index="index" separator="," open="(" close=")">#{workInMethod}</foreach>
+          </when>
+          <otherwise>
+            AND ATBK.work_in_method in ( 2, 3 )
+          </otherwise>
+        </choose>
+        AND WPW.wpw_out = 0
+        <if test='gateType != null'>
+          AND EGW.gate_type = #{gateType}
+        </if>
+        
+    ) WPW
+    group by WPW.wp_id
+  </select>
+  
+  
+  <!-- 현장 출입게이트 근로자 검색 -->
+  <select id="findGateSystemEntranceUserList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    select
+      RES.wp_id,
+      RES.wp_name,
+      G5MCOOP.mb_name as coop_mb_name,
+      RES.worker_mb_id,
+      RES.worker_mb_name,
+      (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+      (select section_name from work_section where section_cd = RES.work_section_b) as work_section_name_b,
+      RES.temperature,
+      RES.measure_time
+    FROM (
+           select
+             WPW.wp_id,
+             WP.wp_name,
+             WPW.coop_mb_id,
+             WPW.worker_mb_id,
+             G5M.mb_name as worker_mb_name,
+             WPW.work_section_b,
+             ATBK.work_in_date as measure_time,
+             ATBK.work_in_temperature as temperature,
+             ATBK.work_status,
+             case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+             case
+               when WPMC.support_gps = 1 then
+                 IFNULL((
+                          SELECT 1
+                          FROM gps_location GL
+                          WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+                            and GL.mb_id is not null
+                            AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+                          LIMIT 1
+                        ), 0)
+               when WPMC.support_ble = 1 then
+                 IFNULL((
+                          SELECT 1
+                          FROM sensor_log_recent SLR
+                                 INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+                          WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+                            AND SLR.slr_datetime  >= DATE(NOW())
+                            AND SLR.in_out_type IN ( 0, 1 )
+                          LIMIT 1
+                        ), 0)
+               else 0
+               end as active_worker,
+             case when
+                <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+                  <property name="aliasDeviceStatus" value="WDS"/>
+                </include>
+               then 1 else 0
+             end as use_app_worker
+           from work_place WP
+                  inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id
+                  inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+                  inner join attendance_book ATBK ON ATBK.wp_id = WP.wp_id
+                  inner join work_place_worker WPW ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+                  INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+                  LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+           where WP.wp_end_status = 0
+             AND WP.wp_id =  #{wpId}
+             AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+              <choose>
+                <when test='workInMethods != null and !workInMethods.empty '>
+                  AND ATBK.work_in_method IN <foreach collection="workInMethods" item="workInMethod" index="index" separator="," open="(" close=")">#{workInMethod}</foreach>
+                </when>
+                <otherwise>
+                  AND ATBK.work_in_method in ( 2, 3 )
+                </otherwise>
+              </choose>
+              <if test='gateType != null'>
+                AND EGW.gate_type = #{gateType}
+              </if>
+             AND WPW.wpw_out = 0
+         ) RES
+           LEFT JOIN work_place_coop WPC ON WPC.wp_id = RES.wp_id AND WPC.coop_mb_id = RES.coop_mb_id
+           LEFT JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    WHERE 'x' = 'x'
+    <if test="residual != null ">
+      AND case when RES.need_device_check = 1 then RES.use_app_worker * RES.active_worker else RES.active_worker end = #{residual}
+    </if>
+    <if test="useApp != null  ">
+      AND RES.use_app_worker = #{useApp}
+    </if>
+  </select>
+  
+  
+  <select id="findGateEntranceHistoryList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      G5MCOOP.mb_name as coop_mb_name,
+      WPW.worker_mb_id,
+      G5M.mb_name as worker_mb_name,
+      G5M.mb_level,
+      (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+      (select section_name from work_section where section_cd = WPW.work_section_b) as work_section_name_b,
+      ATBK.work_in_temperature as temperature,
+      ATBK.work_in_date as measure_time
+    FROM work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id
+    inner join attendance_book ATBK ON ATBK.wp_id = WP.wp_id
+    inner join work_place_worker WPW ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    LEFT JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    where WP.wp_id =  #{wpId}
+    AND WPW.wpw_out = 0
+    <choose>
+      <when test='workInMethods != null and !workInMethods.empty '>
+        AND ATBK.work_in_method IN <foreach collection="workInMethods" item="workInMethod" index="index" separator="," open="(" close=")">#{workInMethod}</foreach>
+      </when>
+      <otherwise>
+        AND ATBK.work_in_method in ( 2, 3 )
+      </otherwise>
+    </choose>
+    <if test='gateType != null'>
+      AND EGW.gate_type = #{gateType}
+    </if>
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+    </if>
+    <choose>
+      <when test='workingDay != null '>
+        AND ATBK.working_day = DATE_FORMAT(#{workingDay}, '%Y%m%d')
+      </when>
+      <otherwise>
+        AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      </otherwise>
+    </choose>
+    ORDER BY ATBK.work_in_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="countGateEntranceHistoryList"
+    parameterType="map"
+    resultType="long">
+    select
+     count(*) as cnt
+    FROM work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id
+    inner join attendance_book ATBK ON ATBK.wp_id = WP.wp_id
+    inner join work_place_worker WPW ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    LEFT JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    where WP.wp_id =  #{wpId}
+    AND WPW.wpw_out = 0
+    <choose>
+      <when test='workInMethods != null and !workInMethods.empty '>
+        AND ATBK.work_in_method IN <foreach collection="workInMethods" item="workInMethod" index="index" separator="," open="(" close=")">#{workInMethod}</foreach>
+      </when>
+      <otherwise>
+        AND ATBK.work_in_method in ( 2, 3 )
+      </otherwise>
+    </choose>
+    <if test='gateType != null'>
+      AND EGW.gate_type = #{gateType}
+    </if>
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      G5MCOOP.mb_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND G5MCOOP.mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+    </if>
+    <choose>
+      <when test='workingDay != null '>
+        AND ATBK.working_day = DATE_FORMAT(#{workingDay}, '%Y%m%d')
+      </when>
+      <otherwise>
+        AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      </otherwise>
+    </choose>
+  </select>
+  
+  <!-- IMOS - QR Reader 출입게이트 출역유형별 현황 정보 -->
+  <select id="findQrGateState"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosQrGateAttendantStateVo">
+    select
+      IFNULL( count(RES.mb_id), 0 ) as total_worker_count,
+      IFNULL( SUM(RES.qr_enter_worker), 0 ) as qr_worker_count,
+      IFNULL( SUM(RES.etc_enter_worker), 0 ) as etc_worker_count,
+      IFNULL( SUM(RES.qr_enter_manager), 0 ) as qr_manager_count
+    from (
+      select
+        WPW.worker_mb_id as mb_id,
+        case when ATBK.work_in_method = 2 then 1 else 0 end as qr_enter_worker,
+        case when ATBK.work_in_method is null or ATBK.work_in_method != 2 then 1 else 0 end as etc_enter_worker,
+        0 as qr_enter_manager
+      FROM work_place_worker WPW
+      INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+      inner join entr_gate_workplace EGW on EGW.wp_id = WPW.wp_id
+      left join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id
+                                        and ATBK.mb_id = WPW.worker_mb_id
+                                        and ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      where WPW.wpw_out = 0
+      AND WPW.wp_id =  #{wpId}
+      AND (
+        ATBK.mb_id IS NOT NULL
+        OR
+        EXISTS(
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id
+          and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+      )
+      union
+      select
+        ATBK.mb_id,
+        0 as qr_enter_worker,
+        0 as etc_enter_worker,
+        1 as qr_enter_manager
+      FROM attendance_book ATBK
+      where ATBK.wp_id = #{wpId}
+      and ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      and ATBK.mb_level is not null AND ATBK.mb_level > 0 and ATBK.mb_level != 2
+    ) RES
+  </select>
+  
+  <!-- QR Reader 출입게이트 실시간 근로자 현황 정보 -->
+  <select id="findQrReaderWorkStatus"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.CurrentWorkStatusSummary">
+    select
+      count(distinct WPW.worker_mb_id) as total_worker_count,
+      sum( case when WPW.need_device_check = 1 then WPW.use_app_worker * WPW.active_worker else WPW.active_worker end ) as current_worker_count
+    FROM (
+      select
+        WPW.wp_id,
+        WPW.worker_mb_id,
+        case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+        case
+          when WPMC.support_gps = 1 then
+          IFNULL((
+          SELECT 1
+          FROM gps_location GL
+          WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+          and GL.mb_id is not null
+          AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+          LIMIT 1
+        ), 0)
+        when WPMC.support_ble = 1 then
+          IFNULL((
+            SELECT 1
+            FROM sensor_log_recent SLR
+            INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+            WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+            AND SLR.slr_datetime  >= DATE(NOW())
+            AND SLR.in_out_type IN ( 0, 1 )
+            LIMIT 1
+          ), 0)
+          else 0
+        end as active_worker,
+        case
+          when
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+              <property name="aliasDeviceStatus" value="WDS"/>
+            </include>
+          then 1 else 0
+        end as use_app_worker
+      from work_place WP
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+      inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id AND EGW.gate_type = 2
+      inner join attendance_book ATBK ON ATBK.wp_id = WP.wp_id
+                                     AND ATBK.mb_level = 2
+                                     AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+                                     AND ATBK.work_in_method = 2
+      inner join work_place_worker WPW ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      where WP.wp_end_status = 0
+      AND WP.wp_id = #{wpId}
+      AND WPW.wpw_out = 0
+      union
+      select
+        WPW.wp_id,
+        WPW.worker_mb_id,
+        case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+        case
+          when WPMC.support_gps = 1 then
+            IFNULL((
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+            ), 0)
+          when WPMC.support_ble = 1 then
+            IFNULL((
+              SELECT 1
+              FROM sensor_log_recent SLR
+              INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+              WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+              AND SLR.slr_datetime  >= DATE(NOW())
+              AND SLR.in_out_type IN ( 0, 1 )
+              LIMIT 1
+            ), 0)
+          else 0
+        end as active_worker,
+        case
+          when
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+              <property name="aliasDeviceStatus" value="WDS"/>
+            </include>
+          then 1 else 0
+        end as use_app_worker
+      from work_place WP
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+      inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id AND EGW.gate_type = 2
+      inner join work_place_worker WPW ON WP.wp_id = WPW.wp_id
+      left join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+                                    AND ATBK.mb_level = 2
+                                    AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+                                    AND ATBK.work_in_method = 2
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      where WP.wp_end_status = 0
+      AND WP.wp_id = #{wpId}
+      AND WPW.wpw_out = 0
+      AND ATBK.mb_id IS NULL
+      AND EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        where SLI.wp_id = WPW.wp_id
+        and SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[ < ]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        LIMIT 1
+      )
+    ) WPW
+    group by WPW.wp_id
+  </select>
+  
+  <!-- 현장 출입게이트 협력사별 근로자 현황 검색  -->
+  <select id="findQrGateCoopStateList"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosQrGateCoopStateVo">
+    select
+      WPC.coop_mb_id,
+      IFNULL(( select mb_name from g5_member G5COOP where G5COOP.mb_id = WPC.coop_mb_id LIMIT 1),'') as coop_mb_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      <choose>
+        <when test='attendantType != null and attendantType == 1 '>
+          IFNULL( SUM(WORKERS.qr_enter_worker), 0 ) as worker_cnt
+        </when>
+        <when test='attendantType != null and attendantType == 2 '>
+          IFNULL( SUM(WORKERS.etc_enter_worker), 0 ) as worker_cnt
+        </when>
+        <when test='attendantType != null '>
+          IFNULL( SUM(WORKERS.qr_enter_manager), 0 ) as worker_cnt
+        </when>
+        <otherwise>
+          IFNULL( count( WORKERS.mb_id ), 0) as worker_cnt
+        </otherwise>
+      </choose>
+    from work_place_coop WPC
+      left join (
+         select
+           WPW.wp_id,
+           WPW.worker_mb_id as mb_id,
+           WPW.coop_mb_id,
+          case when ATBK.work_in_method = 2 then 1 else 0 end as qr_enter_worker,
+          case when ATBK.work_in_method is null or ATBK.work_in_method != 2 then 1 else 0 end as etc_enter_worker,
+           0 as qr_enter_manager
+         FROM work_place_worker WPW
+                INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+                inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+                inner join entr_gate_workplace EGW on EGW.wp_id = WPW.wp_id
+                left join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id
+                                              and ATBK.mb_id = WPW.worker_mb_id
+                                              and ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+         where WPW.wpw_out = 0
+           AND WPW.wp_id =  #{wpId}
+           AND EXISTS(
+             select 1
+             from sensor_log_inout SLI
+             where SLI.wp_id = WPW.wp_id
+               and SLI.mb_id = WPW.worker_mb_id
+               AND SLI.si_type = '출입용'
+               AND SLI.sli_in_datetime >= DATE(NOW())
+               AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+               LIMIT 1
+           )
+      ) WORKERS ON WORKERS.wp_id = WPC.wp_id AND WORKERS.coop_mb_id = WPC.coop_mb_id
+     where WPC.wp_id = #{wpId}
+     group by WPC.coop_mb_id
+     order by coop_mb_name
+  </select>
+  
+  
+  <!-- 현장 출입게이트 협력사 근로자 리스트  -->
+  <select id="findQrGateCoopWorkerList"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      WPC.coop_mb_id,
+      IFNULL(( select mb_name from g5_member G5COOP where G5COOP.mb_id = WPC.coop_mb_id LIMIT 1),'') as coop_mb_name,
+      G5M.mb_id as worker_mb_id,
+      G5M.mb_name as worker_mb_name,
+      G5M.mb_level,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      WORKERS.work_section_b,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WORKERS.work_section_b ), '' ) AS work_section_name_b,
+      WORKERS.temperature,
+      WORKERS.measure_time
+    from  (
+      select
+        WPW.wp_id,
+        WPW.worker_mb_id as mb_id,
+        WPW.coop_mb_id,
+        WPW.work_section_b,
+        case when ATBK.work_in_method = 2 then 1 else 0 end as qr_enter_worker,
+        case when ATBK.work_in_method is null or ATBK.work_in_method != 2 then 1 else 0 end as etc_enter_worker,
+        0 as qr_enter_manager,
+        case
+          when ATBK.work_in_date is not null then ATBK.work_in_date
+          else (
+            select min(SLI.sli_in_datetime)
+            from sensor_log_inout SLI
+            where SLI.wp_id = WPW.wp_id
+            and SLI.mb_id = WPW.worker_mb_id
+            AND SLI.si_type = '출입용'
+            AND SLI.sli_in_datetime >= DATE(NOW())
+            AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          )
+        end as measure_time,
+        ATBK.work_in_temperature as temperature
+      FROM work_place_worker WPW
+      INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+      inner join entr_gate_workplace EGW on EGW.wp_id = WPW.wp_id
+      left join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id
+                                    and ATBK.mb_id = WPW.worker_mb_id
+                                    and ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      where WPW.wpw_out = 0
+      AND WPW.wp_id =  #{wpId}
+      AND WPW.coop_mb_id = #{coopMbId}
+      AND (
+        ATBK.mb_id is not null
+        or
+        EXISTS(
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id
+          and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+      )
+    ) WORKERS
+    inner join work_place_coop WPC ON WPC.wp_id = WORKERS.wp_id AND WPC.coop_mb_id = WORKERS.coop_mb_id
+    inner join work_place WP ON WP.wp_id = WORKERS.wp_id
+    inner join g5_member G5M ON G5M.mb_id = WORKERS.mb_id
+    where 'x' = 'x'
+    <choose>
+      <when test='attendantType != null and attendantType == 1 '>
+        AND WORKERS.qr_enter_worker = 1
+      </when>
+      <when test='attendantType != null and attendantType == 2 '>
+        AND WORKERS.etc_enter_worker = 1
+      </when>
+      <when test='attendantType != null '>
+        AND 'x' = 'y'
+      </when>
+    </choose>
+  </select>
+  
+  <!-- 현장 출입게이트 관리자 리스트  -->
+  <select id="findQrGateManagerList"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosAttendantManagerVo">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      G5M.mb_id,
+      G5M.mb_name,
+      G5M.mb_level,
+      case
+          when G5M.mb_level = 3 then G5M.mb_name
+          when G5M.mb_level = 4 then IFNULL((
+            select CC.cc_name
+            from con_company CC
+            where CC.cc_id = G5M.mb_12
+            LIMIT 1
+          ), '' )
+          when G5M.mb_level = 5 then IFNULL((
+            select CC.cc_name
+            from con_company CC
+            where CC.cc_id = G5M.cc_id
+            LIMIT 1
+          ), '' )
+          when G5M.mb_level in ( 6, 7 ) then IFNULL((
+            select OO.office_name
+            from ordering_office OO
+            where OO.office_no = G5M.office_no
+            LIMIT 1
+          ), '' )
+          when G5M.mb_level = 10 then 'System Admin'
+          else ''
+      end as company_name,
+      ATBK.work_in_temperature as temperature,
+      ATBK.work_in_date as measure_time
+    from attendance_book ATBK
+    inner join work_place WP ON ATBK.wp_id = WP.wp_id
+    inner join g5_member G5M ON G5M.mb_id = ATBK.mb_id
+    where ATBK.wp_id = #{wpId}
+    and ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+    and ATBK.mb_level is not null and ATBK.mb_level > 0 and ATBK.mb_level != 2
+  </select>
+  
+  
+  <!-- IMOS QR Reader Gate 협력사별 근로자 작업현황 -->
+  <select id="findQrGateCoopListByWorkingStatus"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosQrGateCoopStateVo">
+    select
+      WPC.coop_mb_id,
+      IFNULL(( select mb_name from g5_member G5COOP where G5COOP.mb_id = WPC.coop_mb_id LIMIT 1),'') as coop_mb_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      IFNULL( SUM(  case
+                      when (
+                          case
+                          when WORKERS.need_device_check = 1 then WORKERS.use_app_worker * WORKERS.active_worker
+                          else WORKERS.active_worker end
+                         ) = #{currentWorking}
+                      then 1 else 0 end
+      ), 0 ) as worker_cnt
+    FROM work_place_coop WPC
+      left join (
+        select
+          WPW.wp_id,
+          WPW.worker_mb_id,
+          WPW.coop_mb_id,
+          case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+          case
+            when WPMC.support_gps = 1 then
+              IFNULL((
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+            ), 0)
+            when WPMC.support_ble = 1 then
+              IFNULL((
+                SELECT 1
+                FROM sensor_log_recent SLR
+                INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+                WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+                AND SLR.slr_datetime  >= DATE(NOW())
+                AND SLR.in_out_type IN ( 0, 1 )
+                LIMIT 1
+              ), 0)
+            else 0
+          end as active_worker,
+          case
+            when
+              <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+                <property name="aliasDeviceStatus" value="WDS"/>
+              </include>
+            then 1 else 0
+          end as use_app_worker
+        from work_place WP
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+        inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id AND EGW.gate_type = 2
+        inner join attendance_book ATBK ON ATBK.wp_id = WP.wp_id
+                                       AND ATBK.mb_level = 2
+                                       AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+                                       AND ATBK.work_in_method = 2
+        inner join work_place_worker WPW ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+        where WP.wp_end_status = 0
+        AND WP.wp_id = #{wpId}
+        AND WPW.wpw_out = 0
+        union
+        select
+          WPW.wp_id,
+          WPW.worker_mb_id,
+          WPW.coop_mb_id,
+          case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+          case
+            when WPMC.support_gps = 1 then
+              IFNULL((
+                SELECT 1
+                FROM gps_location GL
+                WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+                and GL.mb_id is not null
+                AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+                LIMIT 1
+              ), 0)
+            when WPMC.support_ble = 1 then
+              IFNULL((
+                SELECT 1
+                FROM sensor_log_recent SLR
+                INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+                WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+                AND SLR.slr_datetime  >= DATE(NOW())
+                AND SLR.in_out_type IN ( 0, 1 )
+                LIMIT 1
+              ), 0)
+            else 0
+          end as active_worker,
+          case
+            when
+              <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+                <property name="aliasDeviceStatus" value="WDS"/>
+              </include>
+            then 1 else 0
+          end as use_app_worker
+        from work_place WP
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+        inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id AND EGW.gate_type = 2
+        inner join work_place_worker WPW ON WP.wp_id = WPW.wp_id
+        left join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+                                      AND ATBK.mb_level = 2
+                                      AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+                                      AND ATBK.work_in_method = 2
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+        where WP.wp_end_status = 0
+        AND WP.wp_id = #{wpId}
+        AND WPW.wpw_out = 0
+        AND ATBK.mb_id IS NULL
+        AND EXISTS(
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id
+          and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[ < ]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+      ) WORKERS ON WORKERS.wp_id = WPC.wp_id AND WORKERS.coop_mb_id = WPC.coop_mb_id
+    where WPC.wp_id = #{wpId}
+    group by WPC.coop_mb_id
+    order by coop_mb_name
+  </select>
+  
+  
+  <!--  IMOS QR Reader Gate 협력사 근로자 작업현황 리스트 -->
+  <select id="findQrGateCoopWorkerListByWorkingStatus"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosWorkingWorkerVo">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      WPC.coop_mb_id,
+      IFNULL(( select mb_name from g5_member G5COOP where G5COOP.mb_id = WPC.coop_mb_id LIMIT 1),'') as coop_mb_name,
+      G5M.mb_id as worker_mb_id,
+      G5M.mb_name as worker_mb_name,
+      G5M.mb_level,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      WORKERS.work_section_b,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WORKERS.work_section_b ), '' ) AS work_section_name_b,
+      WORKERS.temperature,
+      WORKERS.measure_time,
+      CASE
+        WHEN need_device_check = 1 and WORKERS.upt_datetime IS NULL THEN 11
+        WHEN need_device_check = 1 and WORKERS.upt_datetime <![CDATA[ < ]]> date(now()) THEN 12
+        WHEN need_device_check = 1 and WORKERS.upt_datetime <![CDATA[ <= ]]> date_sub( NOW(), interval 22 minute ) THEN 13
+        WHEN need_device_check = 1 and WORKERS.ble_check != 1 THEN 14
+        WHEN need_device_check = 1 and WORKERS.loc_check != 1 THEN 15
+        ELSE WORKERS.close_reason
+      END as close_reason,
+      greatest(
+        COALESCE( CASE
+          WHEN need_device_check = 1 and WORKERS.upt_datetime IS NULL THEN null
+          WHEN need_device_check = 1 and WORKERS.upt_datetime <![CDATA[ < ]]> date(now()) THEN null
+          WHEN need_device_check = 1 and WORKERS.upt_datetime <![CDATA[ <= ]]> date_sub( NOW(), interval 22 minute ) THEN WORKERS.upt_datetime
+          WHEN need_device_check = 1 and WORKERS.ble_check != 1 THEN WORKERS.upt_datetime
+          WHEN need_device_check = 1 and WORKERS.loc_check != 1 THEN WORKERS.upt_datetime
+          ELSE WORKERS.close_time
+        END, 0 )
+        ,WORKERS.measure_time
+      ) as close_time
+    FROM (
+      select
+        WPW.wp_id,
+        WPW.worker_mb_id as mb_id,
+        WPW.coop_mb_id,
+        WPW.work_section_b,
+        ATBK.work_in_date as measure_time,
+        ATBK.work_in_temperature as temperature,
+        case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+        case
+          when WPMC.support_gps = 1 then
+            IFNULL((
+            SELECT
+              CASE
+                WHEN GL.measure_time IS NULL THEN 21
+                WHEN GL.measure_time <![CDATA[ < ]]> DATE_ADD(NOW(), INTERVAL -10 MINUTE) THEN 22
+                ELSE 1
+              END
+            FROM gps_location GL
+            WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+            LIMIT 1
+          ), 21)
+          when WPMC.support_ble = 1 then
+            IFNULL((
+              SELECT
+                CASE
+                  WHEN SLR.si_idx IS NULL THEN 31
+                  WHEN SLR.slr_datetime <![CDATA[ < ]]> date(now()) THEN 32
+                  WHEN SLR.in_out_type IN ( 2, 3 ) THEN 33
+                  WHEN SBL.building_no IS NULL THEN 34
+                ELSE 1
+                END
+              FROM sensor_log_recent SLR
+              LEFT JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+              WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+              LIMIT 1
+            ), 31 )
+          else 0
+        end as close_reason,
+        case
+          when WPMC.support_gps = 1 then
+            IFNULL((
+              SELECT
+                 GL.measure_time
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              AND GL.measure_time >= DATE(NOW())
+              LIMIT 1
+            ), WDS.upt_datetime)
+          when WPMC.support_ble = 1 then
+            IFNULL((
+              SELECT
+                SLR.slr_datetime
+              FROM sensor_log_recent SLR
+              WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+              AND SLR.slr_datetime >= DATE(NOW())
+              LIMIT 1
+            ), WDS.upt_datetime)
+          else null
+        end as close_time,
+        case
+          when
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+              <property name="aliasDeviceStatus" value="WDS"/>
+            </include>
+          then 1 else 0
+        end as use_app_worker,
+        WDS.upt_datetime,
+        WDS.ble_check,
+        WDS.loc_check
+      from work_place WP
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+      inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id AND EGW.gate_type = 2
+      inner join attendance_book ATBK ON ATBK.wp_id = WP.wp_id
+                                     AND ATBK.mb_level = 2
+                                     AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+                                     AND ATBK.work_in_method = 2
+      inner join work_place_worker WPW ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      where WP.wp_end_status = 0
+      AND WP.wp_id = #{wpId}
+      AND WPW.coop_mb_id = #{coopMbId}
+      AND WPW.wpw_out = 0
+      union
+      select
+        WPW.wp_id,
+        WPW.worker_mb_id as mb_id,
+        WPW.coop_mb_id,
+        WPW.work_section_b,
+        IFNULL((
+          select min(SLI.sli_in_datetime)
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id
+          and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        ), null) as measure_time,
+        null as temparature,
+        case when WPMC.support_gps = 1 then 0 when WPMC.support_ble = 1 then 1 else 0 end as need_device_check,
+        case
+          when WPMC.support_gps = 1 then
+            IFNULL((
+              SELECT
+                CASE
+                  WHEN GL.measure_time IS NULL THEN 21
+                  WHEN GL.measure_time <![CDATA[ < ]]> DATE_ADD(NOW(), INTERVAL -10 MINUTE) THEN 22
+                  ELSE 1
+                END
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              LIMIT 1
+            ), 21)
+          when WPMC.support_ble = 1 then
+            IFNULL((
+            SELECT
+              CASE
+                WHEN SLR.si_idx IS NULL THEN 11
+                WHEN SLR.slr_datetime <![CDATA[ < ]]> date(now()) THEN 12
+                WHEN SLR.in_out_type IN ( 2, 3 ) THEN 13
+                WHEN SBL.building_no IS NULL THEN 14
+                ELSE 1
+              END
+            FROM sensor_log_recent SLR
+            LEFT JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+            WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+            LIMIT 1
+            ), 11 )
+          else 0
+        end as close_reason,
+        case
+          when WPMC.support_gps = 1 then
+            (
+              SELECT
+                  GL.measure_time
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              AND GL.measure_time >= DATE(NOW())
+              LIMIT 1
+            )
+          when WPMC.support_ble = 1 then
+          (
+            SELECT
+              SLR.slr_datetime
+            FROM sensor_log_recent SLR
+            WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+            AND SLR.slr_datetime >= DATE(NOW())
+            LIMIT 1
+          )
+          else null
+        end as close_time,
+        case
+          when
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+              <property name="aliasDeviceStatus" value="WDS"/>
+            </include>
+          then 1 else 0
+        end as use_app_worker,
+        WDS.upt_datetime,
+        WDS.ble_check,
+        WDS.loc_check
+      from work_place WP
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+      inner join entr_gate_workplace EGW on EGW.wp_id = WP.wp_id AND EGW.gate_type = 2
+      inner join work_place_worker WPW ON WP.wp_id = WPW.wp_id
+      left join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id AND ATBK.mb_id = WPW.worker_mb_id
+                                    AND ATBK.mb_level = 2
+                                    AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+                                    AND ATBK.work_in_method = 2
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      where WP.wp_end_status = 0
+      AND WP.wp_id = #{wpId}
+      AND WPW.coop_mb_id = #{coopMbId}
+      AND WPW.wpw_out = 0
+      AND ATBK.mb_id IS NULL
+      AND EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        where SLI.wp_id = WPW.wp_id
+        and SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[ < ]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        LIMIT 1
+      )
+    ) WORKERS
+    inner join work_place_coop WPC ON WPC.wp_id = WORKERS.wp_id AND WPC.coop_mb_id = WORKERS.coop_mb_id
+    inner join work_place WP ON WP.wp_id = WORKERS.wp_id
+    inner join g5_member G5M ON G5M.mb_id = WORKERS.mb_id
+    where ( case
+              when WORKERS.need_device_check = 1 and WORKERS.use_app_worker = 1 and WORKERS.close_reason = 1 then 1
+              when WORKERS.need_device_check = 0 and WORKERS.close_reason = 1 then 1
+              else 0 end
+        ) = #{currentWorking}
+  </select>
+  
+  
+</mapper>

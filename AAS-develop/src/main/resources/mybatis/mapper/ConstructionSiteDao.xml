@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.ConstructionSiteDao">
+  
+  <resultMap id="constructionSiteDetailResultMap" type="kr.co.hulan.aas.mvc.api.workplace.vo.ConstrunctionSiteVo" autoMapping="true">
+    <id property="wpId" column="wp_id"/>
+    <id property="ccId" column="cc_id"/>
+    <collection property="managerList"
+      ofType="kr.co.hulan.aas.mvc.api.orderoffice.vo.ConstructionSiteMangerVo"
+      column="{wpId=wp_id,ccId=cc_id}"
+      select="findConstructionSiteMangerListByKey"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  <!-- 건설사 현장편입 리스트 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.workplace.vo.ConstrunctionSiteVo">
+    SELECT
+      CS.wp_id
+      ,CS.cc_id
+      ,IFNULL((
+        select count(*)
+        from work_place_coop WPC
+        inner join work_place_worker WPW ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+        WHERE WPC.wp_id = CS.wp_id
+        AND WPC.cc_id = CS.cc_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND WPC.coop_mb_id = #{coopMbId}
+        </if>
+        ), 0) AS worker_count
+      ,IFNULL((
+        select count(*)
+        from work_place_coop WPC
+        inner join attendance_book ADB ON WPC.wp_id = ADB.wp_id AND WPC.coop_mb_id = ADB.coop_mb_id
+        where WPC.wp_id = CS.wp_id
+        AND WPC.cc_id = CS.cc_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND WPC.coop_mb_id = #{coopMbId}
+        </if>
+        AND ADB.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      ), 0) AS worker_today_count
+      ,IFNULL((
+        select count(*)
+        from work_place_coop WPC
+        inner join attendance_book ADB ON WPC.wp_id = ADB.wp_id AND WPC.coop_mb_id = ADB.coop_mb_id
+        where WPC.wp_id = CS.wp_id
+        AND WPC.cc_id = CS.cc_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND WPC.coop_mb_id = #{coopMbId}
+        </if>
+        <choose>
+          <when test='startDate != null and endDate != null  '>
+            AND ADB.working_day >= DATE_FORMAT( DATE_SUB(DATE_ADD(LAST_DAY(#{startDate}), INTERVAL 1 DAY), INTERVAL 1 MONTH) , '%Y%m%d')
+            AND ADB.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(#{endDate}), INTERVAL 1 DAY) , '%Y%m%d')
+          </when>
+          <otherwise>
+            AND ADB.working_day >= DATE_FORMAT( DATE_SUB(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), INTERVAL 1 MONTH) , '%Y%m%d')
+            AND ADB.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY) , '%Y%m%d')
+          </otherwise>
+        </choose>
+      ), 0) AS worker_month_count
+      ,IFNULL((
+        select count(*)
+        from work_place_coop WPC
+        inner join attendance_book ADB ON WPC.wp_id = ADB.wp_id AND WPC.coop_mb_id = ADB.coop_mb_id
+        where WPC.wp_id = CS.wp_id
+        AND WPC.cc_id = CS.cc_id
+        <if test='coopMbId != null and coopMbId != "" '>
+          AND WPC.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='startDate != null and endDate != null '>
+          AND ADB.working_day >= DATE_FORMAT( DATE_SUB(DATE_ADD(LAST_DAY(#{startDate}), INTERVAL 1 DAY), INTERVAL 1 MONTH) , '%Y%m%d')
+          AND ADB.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(#{endDate}), INTERVAL 1 DAY) , '%Y%m%d')
+        </if>
+      ), 0) AS worker_total_count
+      ,CS.creator
+      ,CS.create_date
+      ,WP.wp_name
+      ,CC.cc_name
+      ,CS.creator
+    FROM construction_site CS
+    INNER JOIN con_company CC on CC.cc_id = CS.cc_id
+    INNER JOIN work_place WP on WP.wp_id = CS.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND CC.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND CS.wp_id = #{wpId}
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CS.cc_id = #{ccId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionSite">
+      <property name="aliasWorkplace" value="WP"/>
+      <property name="aliasConstructionSite" value="CS"/>
+    </include>
+    ORDER BY CS.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 인원관리 > 건설사 목록 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM construction_site CS
+    INNER JOIN con_company CC on CC.cc_id = CS.cc_id
+    INNER JOIN work_place WP on WP.wp_id = CS.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND CC.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND CS.wp_id = #{wpId}
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CS.cc_id = #{ccId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionSite">
+      <property name="aliasWorkplace" value="WP"/>
+      <property name="aliasConstructionSite" value="CS"/>
+    </include>
+  </select>
+  
+  <!-- 건설사 현장 편입 상세 정보 -->
+  <select id="findInfo"
+    parameterType="kr.co.hulan.aas.mvc.model.domain.ConstructionSiteKey"
+    resultMap="constructionSiteDetailResultMap">
+    SELECT
+      CS.wp_id
+         ,CS.cc_id
+         ,CS.creator
+         ,CS.create_date
+         ,WP.wp_name
+         ,CC.cc_name
+         ,CS.creator
+    FROM construction_site CS
+           INNER JOIN con_company CC on CC.cc_id = CS.cc_id
+           INNER JOIN work_place WP on WP.wp_id = CS.wp_id
+    WHERE CS.wp_id = #{wpId}
+    AND CS.cc_id = #{ccId}
+  </select>
+  
+  <!-- 건설현장 매니저 리스트 정보 -->
+  <select id="findConstructionSiteMangerListByKey"
+    parameterType="kr.co.hulan.aas.mvc.model.domain.ConstructionSiteKey"
+    resultType="kr.co.hulan.aas.mvc.api.workplace.vo.ConstructionSiteManagerVo">
+    SELECT
+      CSM.wp_id
+      ,CSM.cc_id
+      ,CSM.mb_id
+      ,CSM.creator
+      ,CSM.create_date
+      ,WP.wp_name
+      ,CC.cc_name
+      ,G5M.mb_no
+      ,G5M.mb_name as name
+      ,G5M.mb_tel as telephone
+      ,G5M.mb_datetime as registDate
+    FROM construction_site_manager CSM
+    INNER JOIN con_company CC on CC.cc_id = CSM.cc_id
+    INNER JOIN work_place WP on WP.wp_id = CSM.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = CSM.mb_id
+    WHERE CSM.wp_id = #{wpId}
+      AND CSM.cc_id = #{ccId}
+  </select>
+  
+  
+</mapper>

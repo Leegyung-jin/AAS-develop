@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.G5BoardNewDao">
+
+    <select id="findList"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5BoardNewDto">
+        select
+            GBN.bo_table
+            ,GBN.wr_id
+            ,CASE WHEN GWW.wr_id IS NULL THEN GWN.wr_subject ELSE GWW.wr_subject END as wr_subject
+            ,CASE WHEN GWW.wr_id IS NULL THEN GWN.wr_name ELSE GWW.wr_name END as wr_name
+            ,GBN.bn_datetime
+            ,GBN.mb_id
+        from g5_board_new GBN
+            LEFT JOIN g5_write_wpboard GWW ON GWW.wr_id = GBN.wr_id AND GBN.bo_table = 'wpboard'
+            LEFT JOIN g5_write_notice GWN ON GWN.wr_id = GBN.wr_id AND GBN.bo_table = 'notice'
+        where ( GWW.WR_ID IS NOT NULL OR GWN.WR_ID IS NOT NULL )
+        order by GBN.bn_datetime desc
+        limit 10
+    </select>
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.G5BoardNewDto">
+        INSERT INTO g5_board_new (
+            bo_table
+            , wr_id
+            , wr_parent
+            , bn_datetime
+            , mb_id
+        )
+        VALUES (
+            #{boTable}
+            , #{wrId}
+            , #{wrParent}
+            , NOW()
+            , #{mbId}
+        )
+    </insert>
+
+</mapper>

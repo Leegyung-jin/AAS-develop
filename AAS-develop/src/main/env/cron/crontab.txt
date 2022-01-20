@@ -1,0 +1,3 @@
+0 1 * * * /home/huser/script/db_backup.sh >> /data/script/log/backup.txt
+0 5 1,15 * * /data/script/app_backup.sh  >> /data/script/log//backup.txt
+0 4 1,15 * * /data/script/static_backup.sh  >> /data/script/log/backup.txt

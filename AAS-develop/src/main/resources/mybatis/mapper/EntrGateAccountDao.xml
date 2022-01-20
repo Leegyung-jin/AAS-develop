@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.EntrGateAccountDao">
+  
+  <resultMap id="EntrGateAccountDetailMap" type="kr.co.hulan.aas.mvc.api.entergate.vo.EntrGateAccountDetailVo" autoMapping="true">
+    <id property="accountId" column="account_id"/>
+    <collection property="workplaceList"
+      ofType="kr.co.hulan.aas.mvc.api.entergate.vo.EntrGateWorkplaceVo"
+      columnPrefix="egw_"
+      autoMapping="true"
+    >
+      <id property="accountId" column="account_id"/>
+      <id property="mappingCd" column="mapping_cd"/>
+    </collection>
+  </resultMap>
+  
+  <!-- 현장 출입게이트 연동 정보 리스트 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.entergate.vo.EntrGateAccountListVo">
+    SELECT
+      EGA.account_id
+      ,EGA.account_name
+      ,EGA.description
+      ,EGA.status
+      ,IFNULL((
+          select count(*)
+          from entr_gate_workplace EGW
+          where EGW.account_id = EGA.account_id
+      ),0 ) as workplace_count
+      ,EGA.creator
+      ,EGA.create_date
+      ,EGA.updater
+      ,EGA.update_date
+    FROM entr_gate_account EGA
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        EGA.account_id like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        EGA.account_name like  concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='accountId != null and accountId != "" '>
+      AND EGA.account_id like  concat( '%', #{accountId} ,'%')
+    </if>
+    <if test='accountName != null and accountName != "" '>
+      AND EGA.account_name like  concat( '%', #{accountName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND EXISTS(
+          SELECT 1
+          FROM entr_gate_workplace EGW
+          WHERE EGW.account_id = EGA.account_id
+          AND EGW.wp_id = #{wpId}
+          LIMIT 1
+      )
+    </if>
+    ORDER BY EGA.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 현장 출입게이트 연동 정보 리스트 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT COUNT(*)
+    FROM entr_gate_account EGA
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        EGA.account_id like  concat( '%', #{COMPLEX} ,'%')
+        OR
+        EGA.account_name like  concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='accountId != null and accountId != "" '>
+      AND EGA.account_id like  concat( '%', #{accountId} ,'%')
+    </if>
+    <if test='accountName != null and accountName != "" '>
+      AND EGA.account_name like  concat( '%', #{accountName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND EXISTS(
+        SELECT 1
+        FROM entr_gate_workplace EGW
+        WHERE EGW.account_id = EGA.account_id
+        AND EGW.wp_id = #{wpId}
+        LIMIT 1
+      )
+    </if>
+  </select>
+  
+  <!-- 현장 출입게이트 연동 정보 상세 -->
+  <select id="findInfo"
+    parameterType="string"
+    resultMap="EntrGateAccountDetailMap">
+    SELECT
+      EGA.account_id
+      ,EGA.account_name
+      ,EGA.description
+      ,EGA.status
+      ,EGA.creator
+      ,EGA.create_date
+      ,EGA.updater
+      ,EGA.update_date
+      ,<include refid="kr.co.hulan.aas.mvc.dao.mapper.EntrGateWorkplaceDao.entrGateWorkplaceColumn"><property name="alias" value="EGW"/><property name="alias_column" value="egw_"/></include>
+      ,WP.wp_name as egw_wp_name
+    FROM entr_gate_account EGA
+    LEFT JOIN entr_gate_workplace EGW ON EGW.account_id = EGA.account_id
+    LEFT JOIN work_place WP ON WP.wp_id = EGW.wp_id
+    WHERE EGA.account_id = #{accountId}
+  </select>
+  
+</mapper>

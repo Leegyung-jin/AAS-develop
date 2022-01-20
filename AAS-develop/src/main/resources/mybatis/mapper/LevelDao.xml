@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.LevelDao">
+  
+  <!-- 검색된 등급 목록 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.level.model.dto.LevelDto">
+    SELECT
+        MBLV.mb_level
+      ,MBLV.mb_level_name
+      ,MBLV.description
+      ,MBLV.create_date
+      ,MBLV.creator
+      ,MBLV.update_date
+      ,MBLV.updater
+    FROM member_level MBLV
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      MBLV.mb_level like concat( '%', #{COMPLEX} ,'%')
+      OR
+      MBLV.mb_level_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbLevel != null and mbLevel != "" '>
+      AND MBLV.mb_level like concat( '%', #{mbLevel} ,'%')
+    </if>
+    <if test='mbLevelName != null and mbLevelName != "" '>
+      AND MBLV.mb_level_name like concat( '%', #{mbLevelName} ,'%')
+    </if>
+    ORDER BY MBLV.mb_level DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 검색된 등급 개수 -->
+  <select id="countListByCondition"
+          parameterType="map"
+          resultType="Integer">
+    SELECT
+    count(*) AS CNT
+    FROM member_level MBLV
+    WHERE   'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      MBLV.mb_level like concat( '%', #{COMPLEX} ,'%')
+      OR
+      MBLV.mb_level_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbLevel != null and mbLevel != "" '>
+      AND MBLV.mb_level like concat( '%', #{mbLevel} ,'%')
+    </if>
+    <if test='mbLevelName != null and mbLevelName != "" '>
+      AND MBLV.mb_level_name like concat( '%', #{mbLevelName} ,'%')
+    </if>
+  </select>
+
+  <!-- 등급 상세 정보 -->
+  <select id="findInfo"
+          parameterType="Integer"
+          resultType="kr.co.hulan.aas.mvc.api.level.model.dto.LevelDto">
+    SELECT
+    MBLV.mb_level
+    ,MBLV.mb_level_name
+    ,MBLV.description
+    ,MBLV.create_date
+    ,MBLV.creator
+    ,MBLV.update_date
+    ,MBLV.updater
+    FROM member_level MBLV
+    WHERE MBLV.mb_level = #{mbLevel}
+  </select>
+
+  <!-- 등급별 선택된 권한 정보  -->
+  <select id="findSelectedAuthorityList"
+          parameterType="map"
+          resultType="java.lang.String">
+
+    SELECT AUTH.authority_id
+    FROM    member_level MBLV
+              INNER JOIN authority_level AULV ON MBLV.mb_level = AULV.mb_level
+              INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id
+    WHERE  MBLV.mb_level = #{mb_level}
+  </select>
+
+</mapper>

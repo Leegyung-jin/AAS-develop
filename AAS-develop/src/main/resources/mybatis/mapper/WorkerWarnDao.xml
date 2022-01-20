@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkerWarnDao">
+
+    <!--
+    인원관리 > 근로자경고
+    -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkerWarnDto">
+        SELECT
+            WW.ww_idx
+            ,WP.wp_id
+            ,WP.wp_name
+            ,WW.coop_mb_id
+            ,IFNULL( ( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = WW.coop_mb_id ), WW.coop_mb_name) AS coop_mb_name
+            ,(
+                SELECT WS.section_name
+                FROM work_place_coop WPC
+                INNER JOIN work_section WS ON WS.section_cd = WPC.work_section_a
+                WHERE WPC.wp_id = WW.wp_id AND WPC.coop_mb_id = WW.coop_mb_id
+            ) AS work_section_name_a
+            ,(
+                SELECT WS.section_name
+                FROM work_place_worker WPW
+                INNER JOIN work_section WS ON WS.section_cd = WPW.work_section_b
+                WHERE WPW.wp_id = WW.wp_id AND WPW.coop_mb_id = WW.coop_mb_id AND WPW.worker_mb_id = WW.worker_mb_id
+            ) AS work_section_name_b
+            ,WW.mb_id
+            ,IFNULL( ( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = WW.mb_id ), WW.mb_name) AS mb_name
+            ,WW.worker_mb_id
+            ,IFNULL( ( SELECT G5M.mb_name FROM g5_member G5M WHERE G5M.mb_id = WW.worker_mb_id ), WW.worker_mb_name) AS worker_mb_name
+            ,WW.ww_content
+            ,WW.ww_datetime
+            ,CC.cc_id
+            ,CC.cc_name
+        FROM worker_warn  WW
+        INNER JOIN work_place WP ON WP.wp_id = WW.wp_id
+        INNER JOIN work_place_coop WPC ON WPC.wp_id = WW.wp_id AND WPC.coop_mb_id = WW.coop_mb_id
+        INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.worker_mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.worker_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.mb_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND WW.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND WW.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND WW.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='workerMbId != null and workerMbId != "" '>
+            AND WW.worker_mb_id like concat( '%', #{workerMbId} ,'%')
+        </if>
+        <if test='workerMbName != null and workerMbName != "" '>
+            AND WW.worker_mb_name like concat( '%', #{workerMbName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND WW.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='startDate != null  '>
+            AND WW.ww_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND WW.ww_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WPC.cc_id = #{ccId}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+        ORDER BY ww_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!--
+        인원관리 > 근로자경고
+    -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        FROM worker_warn  WW
+        INNER JOIN work_place WP ON WP.wp_id = WW.wp_id
+        INNER JOIN work_place_coop WPC ON WPC.wp_id = WW.wp_id AND WPC.coop_mb_id = WW.coop_mb_id
+        INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.worker_mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.worker_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WW.mb_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND WW.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND WW.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND WW.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='workerMbId != null and workerMbId != "" '>
+            AND WW.worker_mb_id like concat( '%', #{workerMbId} ,'%')
+        </if>
+        <if test='workerMbName != null and workerMbName != "" '>
+            AND WW.worker_mb_name like concat( '%', #{workerMbName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND WW.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='startDate != null  '>
+            AND WW.ww_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND WW.ww_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WPC.cc_id = #{ccId}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkerWarnDto">
+        SELECT
+            WW.ww_idx
+             ,WP.wp_id
+             ,WP.wp_name
+             ,WW.coop_mb_id
+             ,WW.coop_mb_name
+             ,WW.mb_id
+             ,WW.mb_name
+             ,WW.worker_mb_id
+             ,WW.worker_mb_name
+             ,WW.ww_content
+             ,WW.ww_datetime
+             ,WP.cc_id
+             ,WP.cc_name
+        FROM worker_warn  WW
+                 INNER JOIN work_place WP ON WP.wp_id = WW.wp_id
+        WHERE WW.ww_idx = #{wwIdx}
+    </select>
+
+
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkerWarnDto">
+        INSERT INTO worker_warn (
+            wp_id
+            , wp_name
+            , coop_mb_id
+            , coop_mb_name
+            , mb_id
+            , mb_name
+            , worker_mb_id
+            , worker_mb_name
+            , ww_content
+            , ww_datetime
+        )
+        VALUES (
+            #{wpId}
+            , #{wpName}
+            , #{coopMbId}
+            , #{coopMbName}
+            , #{mbId}
+            , #{mbName}
+            , #{workerMbId}
+            , #{workerMbName}
+            , #{wwContent}
+            , NOW()
+        );
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkerWarnDto">
+        UPDATE worker_warn
+        SET
+            ww_content = #{wwContent}
+        WHERE ww_idx = #{wwIdx}
+    </update>
+</mapper>

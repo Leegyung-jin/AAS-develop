@@ -1,0 +1,112 @@
+server:
+  port: 11380
+  servlet:
+    context-path: /aas
+
+spring:
+  profiles:
+    active: local
+  ## Spring Kafka
+  kafka:
+    bootstrap-servers: ${kafka.servers:127.0.0.1:9092}
+    consumer:
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        security:
+          protocol: SASL_PLAINTEXT
+        sasl:
+          mechanism: PLAIN
+          jaas:
+            config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${kafka.account:consumer}" password="${kafka.password:hulan0628*}";
+    producer:
+      key-deserializer: org.apache.kafka.common.serialization.StringSerializer
+      value-deserializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        security:
+          protocol: SASL_PLAINTEXT
+        sasl:
+          mechanism: PLAIN
+          jaas:
+            config: org.apache.kafka.common.security.plain.PlainLoginModule required username="${kafka.account:producer}" password="${kafka.password:hulan0628*}";
+
+
+#########################################
+## Custom Properties
+#########################################
+
+file:
+  repository:
+    tempFilePath: tempFile/
+    safeFilePath: safe/
+    memberFilePath: member/
+    boardFilePath: file/
+    workplaceFilePath: workplace/%s/
+    buildingFilePath: building/%s/
+    cctvFilePath: cctv/
+    uiComponentFilePath: uicomponent/%s/
+    officeFilePath: office/%s/
+    conCompanyFilePath: concompany/%s/
+    imosNoticeFilePath: imosNotice/%s/
+
+policy:
+  login:
+    lock_count: 5
+    pwd_change_noti_after: 60
+    pwd_period: 90
+
+default:
+  smart_monitor:
+    workplace_image: ${file.repository.download:https://kun.hulandev.co.kr/static/}smart_monitor/default_workplace.jpg
+    ## 10분 경과된 GPS 무시
+    expired_gps: 10
+
+
+infra:
+  weather:
+    ## 초단기 실황조회
+    serviceUltraSrtNcstUrl: http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst
+    ## 초단기 예보조회
+    serviceUltraSrtFcstUrl: http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtFcst
+    ## 단기 예보조회
+    serviceVilageFcstUrl: http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst
+    ## 중기 육상 예보조회
+    serviceMidLandFcstUrl: http://apis.data.go.kr/1360000/MidFcstInfoService/getMidLandFcst
+    ## 중기 기온조회
+    serviceMidTaUrl: http://apis.data.go.kr/1360000/MidFcstInfoService/getMidTa
+    ## 동네예보 통보문 (육상예보)
+    serviceLandFcstUrl: http://apis.data.go.kr/1360000/VilageFcstMsgService/getLandFcst
+    ## serviceVilageFcst
+
+    ## serviceKey: Z4odUBnAqZE%2Fa6fsha0sBwt9HYe37V7lJojbxTdisCx3lgUFk5wFgjkRo5iDMvxxNmXvm4Nw5neaMdVq40gjIw%3D%3D
+    serviceKey: Z4odUBnAqZE/a6fsha0sBwt9HYe37V7lJojbxTdisCx3lgUFk5wFgjkRo5iDMvxxNmXvm4Nw5neaMdVq40gjIw==
+    threadCount: 1
+    ## cache time ( minute )
+    cacheTime: 60
+  vworld:
+    serviceUrl : http://api.vworld.kr/req/address
+    serviceKey : 24EC4C61-86F6-379A-9B93-409127F9121C
+
+
+aas:
+  config:
+    maxGasSearchPeriod: 100
+
+oauth:
+  url: http://localhost:${server.port:11380}${server.servlet.context-path:/aas}/
+
+airkorea:
+  airEnvironmentSvc:
+    serviceUrl: http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/
+    serviceKey: Z4odUBnAqZE/a6fsha0sBwt9HYe37V7lJojbxTdisCx3lgUFk5wFgjkRo5iDMvxxNmXvm4Nw5neaMdVq40gjIw==
+  stationSvc:
+    serviceUrl: http://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/
+    serviceKey: Z4odUBnAqZE/a6fsha0sBwt9HYe37V7lJojbxTdisCx3lgUFk5wFgjkRo5iDMvxxNmXvm4Nw5neaMdVq40gjIw==
+
+hicc:
+  base:
+    title: "전국 통합 관제 시스템"
+    iconUrl: https://kun.hulandev.co.kr/static/image/imos-c/hulan_logo.png
+    bgColor: "black"
+    bgImgUrl: https://kun.hulan.co.kr/static/image/imos-c/default_hicc_background.png

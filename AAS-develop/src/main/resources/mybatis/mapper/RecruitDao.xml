@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.RecruitDao">
+
+    <!-- 구인관리 > 구인목록 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.RecruitDto">
+        SELECT
+            RC.rc_idx
+            ,RC.rc_title
+            ,RC.wpc_id
+            ,RC.coop_mb_id
+            ,RC.coop_mb_name
+            ,RC.rc_work1
+            ,RC.rc_work2
+            ,RC.rc_work3
+            ,RC.rc_pay_amount
+            ,RC.rc_pay_unit
+            ,RC.rc_tel
+            ,RC.rc_content
+            ,RC.rc_datetime
+            ,RC.rc_updatetime
+            ,WP.wp_id
+            ,WP.wp_name
+            ,WP.cc_id
+            ,WP.cc_name
+            ,RC.work_section_a
+            ,IFNULL(( SELECT WS.section_name from work_section WS where WS.section_cd = RC.work_section_a ), RC.rc_work1 ) AS work_section_name_a
+            ,RC.work_section_b
+            ,IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = RC.work_section_b ), CASE WHEN RC.rc_work2 is null or RC.rc_work2 = '' THEN rc_work3 ELSE CONCAT( RC.rc_work2, '/', RC.rc_work3) END )  AS work_section_name_b
+            ,IFNULL( (
+                select count(*)
+                from recruit_apply RA
+                where RA.rc_idx = RC.rc_idx
+                and RA.ra_status in(0, 1)
+            ), 0 ) AS recruit_apply_count
+        from recruit RC
+            INNER JOIN work_place WP ON WP.wp_id = RC.wp_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                RC.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                RC.rc_title like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WP.cc_id = #{ccId}
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND RC.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND RC.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='rcTitle != null and rcTitle != "" '>
+            AND RC.rc_title like concat( '%', #{rcTitle} ,'%')
+        </if>
+        <if test='workSectionA != null and workSectionA != "" '>
+            AND RC.work_section_a = #{workSectionA}
+        </if>
+        <if test='workSectionB != null and workSectionB != "" '>
+            AND RC.work_section_b = #{workSectionB}
+        </if>
+        ORDER BY RC.rc_updatetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 구인관리 > 구인목록 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        from recruit RC
+            INNER JOIN work_place WP ON WP.wp_id = RC.wp_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                RC.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                RC.rc_title like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WP.cc_id = #{ccId}
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND RC.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND RC.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='rcTitle != null and rcTitle != "" '>
+            AND RC.rc_title like concat( '%', #{rcTitle} ,'%')
+        </if>
+        <if test='workSectionA != null and workSectionA != "" '>
+            AND RC.work_section_a = #{workSectionA}
+        </if>
+        <if test='workSectionB != null and workSectionB != "" '>
+            AND RC.work_section_b = #{workSectionB}
+        </if>
+    </select>
+
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.RecruitDto">
+        SELECT
+            RC.rc_idx
+             ,RC.rc_title
+             ,RC.wpc_id
+             ,RC.coop_mb_id
+             ,RC.coop_mb_name
+             ,RC.rc_work1
+             ,RC.rc_work2
+             ,RC.rc_work3
+             ,RC.work_section_a
+             ,IFNULL(( SELECT WS.section_name from work_section WS where WS.section_cd = RC.work_section_a ), RC.rc_work1 ) AS work_section_name_a
+             ,RC.work_section_b
+             ,IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = RC.work_section_b ), CASE WHEN RC.rc_work2 is null or RC.rc_work2 = '' THEN rc_work3 ELSE CONCAT( RC.rc_work2, '/', RC.rc_work3) END )  AS work_section_name_b
+             ,RC.rc_pay_amount
+             ,RC.rc_pay_unit
+             ,RC.rc_tel
+             ,RC.rc_content
+             ,RC.rc_datetime
+             ,RC.rc_updatetime
+             ,WP.wp_id
+             ,WP.wp_name
+             ,WP.cc_id
+             ,WP.cc_name
+             ,IFNULL( (
+                  select count(*)
+                  from recruit_apply RA
+                  where RA.rc_idx = RC.rc_idx
+                    and RA.ra_status in(0, 1)
+              ), 0 ) AS recruit_apply_count
+        from recruit RC
+                 INNER JOIN work_place WP ON WP.wp_id = RC.wp_id
+        WHERE RC.rc_idx = #{rcIdx}
+    </select>
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.RecruitDto">
+        INSERT INTO recruit (
+            rc_title
+            ,wp_id
+            ,wp_name
+            ,wpc_id
+            ,coop_mb_id
+            ,coop_mb_name
+            ,rc_work1
+            ,rc_work2
+            ,rc_work3
+            ,work_section_a
+            ,work_section_b
+            ,rc_pay_amount
+            ,rc_pay_unit
+            ,rc_tel
+            ,rc_content
+            ,rc_datetime
+            ,rc_updatetime
+        )
+        VALUES (
+            #{rcTitle}
+            ,#{wpId}
+            ,#{wpName}
+            ,#{wpcId}
+            ,#{coopMbId}
+            ,#{coopMbName}
+            ,#{rcWork1,jdbcType=VARCHAR}
+            ,#{rcWork2,jdbcType=VARCHAR}
+            ,#{rcWork3,jdbcType=VARCHAR}
+            ,#{workSectionA,jdbcType=VARCHAR}
+            ,#{workSectionB,jdbcType=VARCHAR}
+            ,#{rcPayAmount}
+            ,#{rcPayUnit}
+            ,#{rcTel}
+            ,#{rcContent}
+            ,NOW()
+            ,NOW()
+        );
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.RecruitDto">
+        UPDATE recruit
+        SET
+            rc_title = #{rcTitle}
+            ,wp_id = #{wpId}
+            ,wp_name = #{wpName}
+            ,wpc_id = #{wpcId}
+            ,coop_mb_id = #{coopMbId}
+            ,coop_mb_name = #{coopMbName}
+            ,rc_work1 = #{rcWork1,jdbcType=VARCHAR}
+            ,rc_work2 = #{rcWork2,jdbcType=VARCHAR}
+            ,rc_work3 = #{rcWork3,jdbcType=VARCHAR}
+            ,work_section_a = #{workSectionA,jdbcType=VARCHAR}
+            ,work_section_b = #{workSectionB,jdbcType=VARCHAR}
+            ,rc_pay_amount = #{rcPayAmount}
+            ,rc_pay_unit = #{rcPayUnit}
+            ,rc_tel = #{rcTel}
+            ,rc_content = #{rcContent}
+        WHERE rc_idx = #{rcIdx}
+    </update>
+
+    <update id="updateExposeTime" parameterType="int">
+        UPDATE recruit
+        SET
+            rc_updatetime  = NOW()
+        WHERE rc_idx = #{rcIdx}
+    </update>
+
+</mapper>

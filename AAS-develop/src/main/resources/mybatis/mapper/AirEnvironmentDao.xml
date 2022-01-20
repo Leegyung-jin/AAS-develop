@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.AirEnvironmentDao">
+  
+  <sql id="sidoWeatherAtmosphere">
+    ${alias}.sido_cd as ${alias_column}sido_cd
+    ,${alias}.humidity as ${alias_column}humidity
+    ,${alias}.wind_direction as ${alias_column}wind_direction
+    ,${alias}.wind_speed as ${alias_column}wind_speed
+    ,${alias}.precipitation_form as ${alias_column}precipitation_form
+    ,${alias}.precipitation_form_name as ${alias_column}precipitation_form_name
+    ,${alias}.precipitation as ${alias_column}precipitation
+    ,${alias}.sky_form as ${alias_column}sky_form
+    ,${alias}.sky_form_name as ${alias_column}sky_form_name
+    ,${alias}.rainfall  as ${alias_column}rainfall
+    ,${alias}.temperature  as ${alias_column}temperature
+    ,${alias}.pm25_value  as ${alias_column}pm25_value
+    ,${alias}.pm25_grade  as ${alias_column}pm25_grade
+  </sql>
+  
+  <!--
+    통합 관제 시도별 현장 요약 정보
+  -->
+  
+  <select id="findSidoWeatherList"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.HiccSidoWeatherVo">
+    select
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.AirEnvironmentDao.sidoWeatherAtmosphere">
+        <property name="alias" value="SWA"/><property name="alias_column" value=""/>
+      </include>
+    from sido_weather_atmosphere SWA
+  </select>
+  
+  <!-- 미세먼지 정보 -->
+  <select id="findInfoByWpId"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.AirEnvironmentDto">
+    SELECT
+      AE.station_name
+      ,AE.sido_name
+      ,AE.mang_name
+      ,AE.khai_value
+      ,AE.khai_grade
+      ,AE.pm25_value
+      ,AE.pm25_grade
+      ,AE.pm25_grade1h
+      ,AE.pm25_value24
+      ,AE.pm25_flag
+      ,AE.pm10_value
+      ,AE.pm10_grade
+      ,AE.pm10_grade1h
+      ,AE.pm10_value24
+      ,AE.pm10_flag
+      ,AE.so2_value
+      ,AE.so2_grade
+      ,AE.so2_flag
+      ,AE.o3_value
+      ,AE.o3_grade
+      ,AE.o3_flag
+      ,AE.co_value
+      ,AE.co_grade
+      ,AE.co_flag
+      ,AE.no2_value
+      ,AE.no2_grade
+      ,AE.no2_flag
+      ,AE.data_time
+      ,AE.create_date
+    FROM work_place WP
+    INNER JOIN air_environment AE ON WP.station_name = AE.station_name
+    WHERE WP.wp_id = #{wpId}
+    AND WP.station_name is not null and WP.station_name != ''
+  </select>
+  
+
+  <update id="updateSidoAirEnvironment" >
+    update sido_weather_atmosphere SWA
+    inner join (
+      select
+        RS.sido_cd,
+        cast( avg( cast( AE.pm25_value as unsigned )) as decimal(3,0)) as pm25_value
+      from region_sido RS
+      inner join air_environment AE ON RS.sido_short_nm = AE.sido_name
+      where AE.mang_name = '도시대기'
+        and AE.pm25_value REGEXP ('^[0-9]+$')
+        and AE.create_date >= date_sub( now(), interval 2 hour )
+      group by RS.sido_cd
+    ) ATM_RAW ON SWA.sido_cd = ATM_RAW.sido_cd
+    set SWA.pm25_value = ATM_RAW.pm25_value,
+        SWA.pm25_grade = case
+                           when ATM_RAW.pm25_value > 75 then 4
+                           when ATM_RAW.pm25_value > 35 then 3
+                           when ATM_RAW.pm25_value > 15 then 2
+                           else 1
+        end,
+        SWA.atm_update = NOW()
+  </update>
+
+</mapper>
+

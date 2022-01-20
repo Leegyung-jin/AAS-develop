@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceUiComponentDao">
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceUiComponentDto">
+    SELECT
+      WPUC.wp_id
+      ,WPUC.location
+      ,WPUC.cmpt_id
+      ,UC.cmpt_name
+      ,UC.file_name
+      ,UC.file_name_org
+      ,UC.file_path
+      ,UC.file_location
+      ,WPUC.create_date
+      ,WPUC.creator
+    FROM work_place_ui_component WPUC
+    LEFT JOIN ui_component UC ON UC.cmpt_id = WPUC.cmpt_id
+    WHERE 'x' = 'x'
+    <if test='wpId != null and wpId != "" '>
+      AND WPUC.wp_id = #{wpId}
+    </if>
+    <if test='creator != null and creator != "" '>
+      AND WPUC.creator = #{creator}
+    </if>
+    ORDER BY WPUC.wp_id, WPUC.location
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <select id="findById"
+    parameterType="kr.co.hulan.aas.mvc.model.domain.WorkPlaceUiComponentCompositeKey"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceUiComponentDto">
+    SELECT
+      WPUC.wp_id
+      ,WPUC.location
+      ,WPUC.cmpt_id
+      ,UC.cmpt_name
+      ,UC.file_name
+      ,UC.file_name_org
+      ,UC.file_path
+      ,UC.file_location
+      ,WPUC.create_date
+      ,WPUC.creator
+    FROM work_place_ui_component WPUC
+    LEFT JOIN ui_component UC ON UC.cmpt_id = WPUC.cmpt_id
+    WHERE WPUC.wp_id = #{wpId}
+    AND WPUC.location = #{location}
+    AND WPUC.creator = #{creator}
+  </select>
+
+  <select id="findSupportedListById"
+    parameterType="kr.co.hulan.aas.mvc.model.domain.WorkPlaceUiComponentCompositeKey"
+    resultType="kr.co.hulan.aas.mvc.model.dto.UiComponentDto">
+    SELECT
+      UC.cmpt_id
+      ,UC.cmpt_name
+      ,UC.description
+      ,UC.file_name
+      ,UC.file_name_org
+      ,UC.file_path
+      ,UC.file_location
+      ,UC.status
+      ,UC.create_date
+      ,UC.creator
+      ,UC.update_date
+      ,UC.updater
+    FROM ui_component UC
+    WHERE UC.status = 1
+    AND NOT EXISTS (
+      SELECT 1
+      FROM work_place_ui_component WPUC
+      WHERE UC.cmpt_id = WPUC.cmpt_id
+      AND WPUC.wp_id = #{wpId}
+      AND WPUC.location = #{location}
+      AND WPUC.creator = #{creator}
+      LIMIT 1
+    )
+    
+  </select>
+
+</mapper>

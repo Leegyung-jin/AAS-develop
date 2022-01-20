@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceSafeyScoreDao">
+  
+  <!--
+  <select id="findTodaySafeyScoreList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSafeyScoreVo">
+    select
+      date_format( now(), '%Y%m%d' ) as safety_date
+      WP.wp_id,
+      WP.wp_name,
+      IFNULL( RESULT.attendances, 0 ) as attendances,
+      IFNULL( RESULT.use_app_workers, 0 ) as use_app_workers,
+      case
+        when RESULT.wp_id IS NOT NULL
+        then 75 + RESULT.use_app_point
+                + RESULT.hazard_point + RESULT.gate_point + RESULT.cctv_point
+        else 75
+      end as score
+    from work_place WP
+    left join (
+      select
+        RES.wp_id,
+        RES.attendances,
+        RES.use_app_workers,
+        RES.uninjury_record_change,
+        case
+          when RES.uninjury_record_change IS NOT NULL AND RES.uninjury_record_change >= DATE(NOW())
+          then -30 else 0
+        end as uninjury_point,
+        cast( (( RES.use_app_workers * 100 / RES.attendances ) - 50 ) * 0.2 as decimal (3,0) ) as use_app_point,
+        IFNULL((
+          select 1
+          from work_device_info WDI
+          where WDI.wp_id = RES.wp_id
+          and WDI.device_type = 4
+          limit 1
+        ), 0 ) as hazard_point,
+        IFNULL((
+          select 1
+          from entr_gate_workplace EGW
+          where EGW.wp_id = RES.wp_id
+          limit 1
+        ), 0 ) as gate_point,
+        IFNULL((
+          select 1
+          from work_place_cctv WPC
+          where WPC.wp_id = RES.wp_id
+          limit 1
+        ), 0 ) as cctv_point
+      from (
+        select
+          WP.wp_id,
+          WP.uninjury_record_change,
+          IFNULL( count(WPW.worker_mb_id), 0 ) as attendances,
+          IFNULL( sum(
+          case when
+            WDS.upt_datetime IS NOT NULL
+            AND WDS.upt_datetime > date_sub(NOW(), interval 22 minute)
+            AND WDS.ble_check = 1
+            AND WDS.loc_check = 1
+            then 1 else 0
+          end
+          ), 0 ) as use_app_workers
+        from work_place WP
+        inner join work_place_worker WPW ON WP.wp_id = WPW.wp_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+        where WP.wp_end_status = 0
+        AND WPW.wpw_out = 0
+        AND EXISTS(
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id
+          and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+        group by WP.wp_id
+      ) RES
+    ) RESULT ON WP.wp_id = RESULT.wp_id
+    where WP.wp_end_status = 0
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    order by WP.wp_name
+  </select>
+  -->
+  
+  
+  <select id="findCurrentSafeyScoreList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSafeyScoreVo">
+    select
+      WP.wp_id
+      ,WP.wp_name
+      ,IFNULL((
+          select WPSS.score
+          FROM work_place_safety_score WPSS
+          WHERE WPSS.wp_id = WP.wp_id
+          AND WPSS.safety_date = DATE_FORMAT(NOW(), '%Y%m%d')
+      ), 0) as score
+    from work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    
+    order by WP.wp_name
+  </select>
+  
+  <select id="findAverageSafeyScoreList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSafeyScoreVo">
+    select
+      WP.wp_id
+      ,WP.wp_name
+      ,IFNULL((
+        select AVG( WPSS.score )
+        FROM work_place_safety_score WPSS
+        WHERE WP.wp_id = WPSS.wp_id
+        AND WPSS.safety_date >= DATE_FORMAT( DATE_SUB(NOW(), interval 30 day), '%Y%m%d')
+        AND (
+          WPSS.attendances > 5
+          OR
+          WPSS.safety_date = DATE_FORMAT(NOW(), '%Y%m%d')
+        )
+      ), 0) as score
+    from work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    where 'x' = 'x'
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    order by WP.wp_name
+  </select>
+  
+  <select id="findEvaluationSafeyScore"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceEvaluationVo">
+    select
+      RES.wp_id
+      ,RES.wp_name
+      ,RES.score
+      ,RES.ranking_in_workplace
+    from (
+      select
+        ORD_RES.wp_id
+        ,ORD_RES.wp_name
+        ,ORD_RES.score
+        ,@rownum:=@rownum+1 as rownum
+        ,case when @lastScore = ORD_RES.score then @lastOrder else ( @lastOrder:= @rownum) end as ranking_in_workplace
+        ,@lastScore:=ORD_RES.score as lastScore
+      from (
+        select
+          WP.wp_id
+          ,WP.wp_name
+          ,IFNULL((
+            select AVG( WPSS.score )
+            FROM work_place_safety_score WPSS
+            WHERE WP.wp_id = WPSS.wp_id
+            AND WPSS.safety_date >= DATE_FORMAT( DATE_SUB(NOW(), interval 30 day), '%Y%m%d')
+            AND (
+              WPSS.attendances > 5
+              OR
+              WPSS.safety_date = DATE_FORMAT(NOW(), '%Y%m%d')
+            )
+          ), 0 ) as score
+        from work_place WP
+        inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+        where 'x' = 'x'
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+          <property name="alias" value="WP"/>
+        </include>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+          <property name="aliasWorkplace" value="WP"/>
+        </include>
+        order by score DESC
+        limit 999999
+      ) ORD_RES,  (SELECT @rownum:=0, @lastScore:=0, @lastOrder:=0 ) TMP
+    ) RES
+    WHERE RES.wp_id = #{wpId}
+  </select>
+  
+  
+  <!--
+  <select id="findSafeyScoreListByWpId"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSafeyScorePerDayVo">
+    select
+      WP_RES.safety_date,
+      WP_RES.wp_id,
+      WP_RES.wp_name,
+      IFNULL( WPSS.score, 0 ) as score
+    from (
+      select
+        TARGET_DATE.safety_date,
+        WP.wp_id,
+        WP.wp_name
+      from work_place WP, (
+        select DATE_FORMAT( curdate() - INTERVAL (b.b + a.a) DAY , '%Y%m%d' ) as safety_date
+        from (
+          select 0 as a
+          union all select 1
+          union all select 2
+          union all select 3
+          union all select 4
+          union all select 5
+          union all select 6
+          union all select 7
+          union all select 8
+          union all select 9
+        ) as a,
+        (
+          select 0 as b
+          union all select 10
+          union all select 20
+        ) as b
+        order by b.b ASC, a.a ASC
+      ) TARGET_DATE
+      where WP.wp_id = #{wpId}
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+      </include>
+    ) WP_RES
+    LEFT JOIN work_place_safety_score WPSS ON WPSS.safety_date = WP_RES.safety_date AND WPSS.wp_id = WP_RES.wp_id
+    ORDER BY WP_RES.safety_date ASC
+  </select>
+  -->
+  <select id="findSafeyScoreListByWpId"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceSafeyScorePerDayVo">
+    select
+    WPSS.safety_date,
+    WP.wp_id,
+    WP.wp_name,
+    WPSS.score as score
+    from work_place WP
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WP.wp_id
+    INNER JOIN work_place_safety_score WPSS ON WPSS.wp_id = WP.wp_id
+    where WP.wp_id = #{wpId}
+    AND WPSS.safety_date >= DATE_FORMAT( DATE_SUB(NOW(), interval 30 day), '%Y%m%d')
+    AND (
+      WPSS.attendances > 5
+      OR
+      WPSS.safety_date = DATE_FORMAT(NOW(), '%Y%m%d')
+    )
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+      <property name="alias" value="WP"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY WPSS.safety_date ASC
+  </select>
+  
+  <insert id="updateSafetyScore">
+    insert into work_place_safety_score (safety_date, wp_id, attendances, use_app_workers, safety_devices, reset_uninjury, score, create_date, creator, update_date, updater)
+    select
+      WPSS.safety_date, WPSS.wp_id, WPSS.attendances, WPSS.use_app_workers, WPSS.safety_devices, WPSS.reset_uninjury, WPSS.score,
+      WPSS.create_date, WPSS.creator, WPSS.update_date, WPSS.updater
+    from (
+      select
+        date_format( now(), '%Y%m%d' ) as safety_date,
+        RESULT.wp_id,
+        IFNULL( RESULT.attendances, 0 ) as attendances,
+        IFNULL( RESULT.use_app_workers, 0 ) as use_app_workers,
+        RESULT.hazard_point + RESULT.gate_point + RESULT.cctv_point as safety_devices,
+        RESULT.reset_uninjury as reset_uninjury,
+        75 + RESULT.use_app_point + RESULT.uninjury_point
+        + RESULT.hazard_point + RESULT.gate_point + RESULT.cctv_point as score,
+        NOW() as create_date,
+        'admin' as creator,
+        NOW() as update_date,
+        'admin' as updater
+      from (
+        select
+          WP.wp_id,
+          WP.uninjury_record_change,
+          IFNULL( RES.attendances, 0 ) as attendances,
+          IFNULL( RES.use_app_workers, 0 ) as use_app_workers,
+          case
+            when WP.uninjury_record_change IS NOT NULL AND WP.uninjury_record_change >= DATE(NOW())
+            then 1 else 0
+          end as reset_uninjury,
+          case
+            when WP.uninjury_record_change IS NOT NULL AND WP.uninjury_record_change >= DATE(NOW())
+            then -30 else 0
+          end as uninjury_point,
+          cast(
+            case
+              when RES.wp_id IS NOT NULL
+              then (( RES.use_app_workers * 100 / RES.attendances ) - 50 ) * 0.2
+              else 0
+            end as decimal (3,0)
+          ) as use_app_point,
+          IFNULL((
+            select 1
+            from work_device_info WDI
+            where WDI.wp_id = WP.wp_id
+            and WDI.device_type = 4
+            limit 1
+          ), 0 ) as hazard_point,
+          IFNULL((
+            select 1
+            from entr_gate_workplace EGW
+            where EGW.wp_id = WP.wp_id
+            limit 1
+          ), 0 ) as gate_point,
+          IFNULL((
+            select 1
+            from work_place_cctv WPC
+            where WPC.wp_id = WP.wp_id
+            limit 1
+          ), 0 ) as cctv_point
+        from work_place WP
+        left join (
+          select
+            WP.wp_id,
+            IFNULL( count(WPW.worker_mb_id), 0 ) as attendances,
+            IFNULL( sum(
+            case when
+              WDS.upt_datetime IS NOT NULL
+              AND WDS.upt_datetime >= DATE(NOW())
+              then 1 else 0
+            end
+            ), 0 ) as use_app_workers
+          from work_place WP
+          inner join work_place_worker WPW ON WP.wp_id = WPW.wp_id
+          LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+          where WP.wp_end_status = 0
+          AND WPW.wpw_out = 0
+          AND EXISTS(
+            select 1
+            from sensor_log_inout SLI
+            where SLI.wp_id = WPW.wp_id
+            and SLI.mb_id = WPW.worker_mb_id
+            AND SLI.si_type = '출입용'
+            AND SLI.sli_in_datetime >= DATE(NOW())
+            AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+            LIMIT 1
+          )
+          group by WP.wp_id
+        ) RES ON WP.wp_id = RES.wp_id
+        where WP.wp_end_status = 0
+      ) RESULT
+    ) WPSS
+    ON DUPLICATE KEY UPDATE
+       attendances = WPSS.attendances,
+       use_app_workers = WPSS.use_app_workers,
+       safety_devices = WPSS.safety_devices,
+       reset_uninjury = WPSS.reset_uninjury,
+       score = WPSS.score,
+       update_date = WPSS.update_date,
+       updater  = WPSS.updater
+  </insert>
+  
+</mapper>

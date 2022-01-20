@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.NetworkVideoRecoderDao">
+  
+  
+  <!-- NVR 리스트 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.NetworkVideoRecoderDto">
+    SELECT
+      NVR.nvr_no
+      ,NVR.nvr_name
+      ,NVR.nvr_type
+      ,NVR.description
+      ,NVR.id
+      ,NVR.pw
+      ,NVR.ip
+      ,NVR.port
+      ,NVR.status
+      ,NVR.wp_id
+      ,WP.wp_name
+      ,NVR.create_date
+      ,NVR.creator
+      ,NVR.update_date
+      ,NVR.updater
+    FROM network_video_recoder NVR
+    LEFT JOIN work_place WP ON WP.wp_id = NVR.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        NVR.nvr_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='nvrName != null and nvrName != "" '>
+      AND NVR.nvr_name like concat( '%', #{nvrName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='status != null '>
+      AND NVR.status = #{status}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY NVR.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- NVR 리스트 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+        count(*) AS CNT
+    FROM network_video_recoder NVR
+    LEFT JOIN work_place WP ON WP.wp_id = NVR.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      NVR.nvr_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='nvrName != null and nvrName != "" '>
+      AND NVR.nvr_name like concat( '%', #{nvrName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='status != null '>
+      AND NVR.status = #{status}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+  
+  <select id="findById"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.NetworkVideoRecoderDto">
+    SELECT
+      NVR.nvr_no
+     ,NVR.nvr_name
+     ,NVR.nvr_type
+     ,NVR.description
+     ,NVR.id
+     ,NVR.pw
+     ,NVR.ip
+     ,NVR.port
+     ,NVR.status
+     ,NVR.wp_id
+     ,WP.wp_name
+     ,NVR.create_date
+     ,NVR.creator
+     ,NVR.update_date
+     ,NVR.updater
+    FROM network_video_recoder NVR
+    LEFT JOIN work_place WP ON WP.wp_id = NVR.wp_id
+    WHERE NVR.nvr_no = #{nvrNo}
+  </select>
+  
+  <!-- NVR 채널 리스트 -->
+  <select id="findChannelList"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.model.dto.NetworkVideoRecoderChannelDto">
+    SELECT
+      NVRC.gid
+      ,NVRC.nvr_no
+      ,NVR.nvr_name
+      ,NVRC.uid
+      ,NVRC.name
+      ,NVRC.size_x
+      ,NVRC.size_y
+      ,NVRC.ptz_control_auth
+      ,NVRC.is_ptz
+      ,NVRC.id
+      ,NVRC.pw
+      ,NVRC.ip
+      ,NVRC.port
+      ,NVRC.url
+      ,NVR.create_date
+      ,NVR.creator
+      ,NVR.update_date
+      ,NVR.updater
+    FROM network_video_recoder_ch NVRC
+    INNER JOIN network_video_recoder NVR ON NVR.nvr_no = NVRC.nvr_no
+    WHERE NVRC.nvr_no = #{nvrNo}
+  </select>
+  
+  <select id="findChannelListByWpId"
+    resultType="kr.co.hulan.aas.mvc.model.dto.NetworkVideoRecoderChannelDto">
+    SELECT
+      NVRC.gid
+       ,NVR.nvr_no
+       ,NVR.nvr_name
+       ,NVRC.uid
+       ,NVRC.name
+       ,NVRC.size_x
+       ,NVRC.size_y
+       ,NVRC.ptz_control_auth
+       ,NVRC.is_ptz
+       ,NVRC.id
+       ,NVRC.pw
+       ,NVRC.ip
+       ,NVRC.port
+       ,NVRC.url
+       ,NVR.create_date
+       ,NVR.creator
+       ,NVR.update_date
+       ,NVR.updater
+    FROM network_video_recoder NVR
+    INNER JOIN network_video_recoder_ch NVRC ON NVR.nvr_no = NVRC.nvr_no
+    WHERE NVR.wp_id = #{wpId}
+    ORDER BY NVRC.name DESC
+  </select>
+  
+
+</mapper>

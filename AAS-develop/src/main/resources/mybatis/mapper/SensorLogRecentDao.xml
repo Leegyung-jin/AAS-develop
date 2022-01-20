@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorLogRecentDao">
+
+  <!--
+      위치관리 > 위험지역기록
+      위치관리 > 위치세부기록
+  -->
+  <select id="findListByCondition"
+          parameterType="map"
+          fetchSize="100000"
+          resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogRecentDto">
+    SELECT
+    slt_idx
+    ,sd_idx
+    ,sd_name
+    ,si_code
+    ,si_type
+    ,si_place1
+    ,si_place2
+    ,wp_id
+    ,wp_name
+    ,cc_id
+    ,cc_name
+    ,wpw_id
+    ,coop_mb_id
+    ,coop_mb_name
+    ,mb_id
+    ,mb_name
+    ,slt_in_sd_idx
+    ,slt_in_sd_name
+    ,slt_in_si_code
+    ,slt_in_si_type
+    ,slt_in_datetime
+    ,slt_out_sd_idx
+    ,slt_out_sd_name
+    ,slt_out_si_code
+    ,slt_out_si_type
+    ,slt_out_datetime
+    ,slt_datetime
+    FROM sensor_log_trace SLT
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      cc_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      wp_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      mb_id like concat( '%', #{COMPLEX} ,'%')
+      OR
+      mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='siType != null and siType != "" '>
+      AND si_type = #{siType}
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND cc_id = #{ccId}
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND wp_id = #{wpId}
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND coop_mb_id = #{coopMbId}
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND coop_mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND mb_id like concat( '%', #{mbId} ,'%')
+    </if>
+    <if test='mbName != null and mbName != "" '>
+      AND mb_name like concat( '%', #{mbName} ,'%')
+    </if>
+    <if test='sdIdx != null '>
+      AND sd_idx = #{sdIdx}
+    </if>
+    <if test='siPlace1 != null and siPlace1 != "" '>
+      AND si_place1 like concat( '%', #{siPlace1} ,'%')
+    </if>
+    <if test='siPlace2 != null and siPlace2 != "" '>
+      AND si_place2 like concat( '%', #{siPlace2} ,'%')
+    </if>
+    <if test='startDate != null and endDate != null  '>
+      AND slt_in_datetime between #{startDate} and #{endDate}
+    </if>
+    ORDER BY slt_in_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+
+</mapper>

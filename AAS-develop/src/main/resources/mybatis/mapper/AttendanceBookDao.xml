@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.AttendanceBookDao">
+  
+  
+  <!--
+   통합 관제 월간 출역 인원 현황 조회
+  -->
+  <select id="findAttendanceMonthStatList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.AttendanceMonthStatVo">
+    select
+      RES.month
+      ,IFNULL( SUM( RES.total_worker_count ), 0) as total_worker_count
+      ,IFNULL(SUM( RES.safety_edu_worker_count ), 0) as safety_edu_worker_count
+      ,IFNULL(SUM( RES.use_app_worker_count ), 0) as use_app_worker_count
+    from (
+      select
+        DATE_FORMAT( NOW(), '%Y%m') as month,
+        SUM( IFNULL((
+          select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+          from sensor_log_inout SLI
+          WHERE SLI.wp_id = WP.wp_id
+          AND SLI.sli_in_si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        ), 0) ) AS total_worker_count,
+        SUM( IFNULL((
+          select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+          from sensor_log_inout SLI
+          WHERE SLI.wp_id = WP.wp_id
+          AND SLI.sli_in_si_type = '안전조회'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        ), 0) )AS safety_edu_worker_count,
+        SUM( IFNULL((
+          select COUNT(*)
+          from work_place_worker WPW
+          inner join worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+          WHERE WPW.wp_id = WP.wp_id
+          AND WDS.upt_datetime >= DATE(NOW())
+        ), 0) ) AS use_app_worker_count
+      from work_place WP
+      where 'x' = 'x'
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+      union
+      select
+        ABMS.working_month  as month
+        ,SUM(ABMS.working_day_count) as total_worker_count
+        ,SUM(ABMS.safety_edu_count) as safety_edu_worker_count
+        ,SUM(ABMS.use_app_count) as use_app_worker_count
+      from attendance_book_month_stat ABMS
+      inner join work_place WP ON ABMS.wp_id = WP.wp_id
+      where 'x' = 'x'
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+        <property name="alias" value="WP"/>
+      </include>
+      and ABMS.working_month >= DATE_FORMAT( DATE_ADD( NOW(), interval -5 month ), '%Y%m')
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+        <property name="aliasWorkplace" value="WP"/>
+      </include>
+      group by ABMS.working_month
+    ) RES
+    GROUP BY RES.month
+    ORDER BY RES.month DESC
+    ;
+  </select>
+  
+  <select id="findDailyAttendanceStat"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.AttendanceDayStatVo">
+
+    select
+      DT.target_date as day,
+      IFNULL((
+         select count(ATB.mb_id) as total_worker_count
+         from attendance_book ATB
+                  inner join work_place_worker WPW ON ATB.wp_id = WPW.wp_id AND ATB.mb_id = WPW.worker_mb_id
+                  inner join  work_place WP ON WP.wp_id = ATB.wp_id
+         where ATB.working_day = DT.target_date
+         AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.HiccInfoDao.WhereSupport">
+           <property name="alias" value="WP"/>
+         </include>
+         AND WPW.wpw_out = 0
+         <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+           <property name="aliasWorkplace" value="WP"/>
+         </include>
+      ), 0 ) as total_worker_count
+    FROM (
+        select DATE_FORMAT(DATE( date_sub( date(now()), interval T1.add_day + T2.add_day * 10 day )), '%Y%m%d') as target_date
+        from (
+                select 0 as add_day
+                union select 1
+                union select 2
+                union select 3
+                union select 4
+                union select 5
+                union select 6
+                union select 7
+                union select 8
+                union select 9
+            )  T1,
+            (
+                select 0 as add_day
+                union select 1
+                union select 2
+                union select 3
+            )  T2
+    ) DT
+    where DT.target_date >= DATE(#{startDate}) and DT.target_date <![CDATA[<]]> DATE(#{endDate})
+    order by DT.target_date
+  </select>
+
+</mapper>

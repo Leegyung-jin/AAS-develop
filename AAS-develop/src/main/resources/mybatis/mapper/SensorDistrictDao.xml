@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorDistrictDao">
+
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorDistrictDto">
+        SELECT
+            SD.sd_idx
+            ,SD.sd_name
+            ,SD.sd_memo
+            ,SD.default_color
+            ,SD.flash_color
+            ,WP.wp_id
+            ,WP.wp_name
+            ,IFNULL((
+                select count(*)
+                from sensor_info SI
+                where SI.wp_id = SD.wp_id
+                and SI.sd_idx = SD.sd_idx
+            ),0) AS sensor_count
+        FROM sensor_district SD
+            INNER JOIN work_place WP ON WP.wp_id = SD.wp_id
+        WHERE 'x' = 'x'
+        <if test='ccId != null and ccId != "" '>
+            AND WP.cc_id = #{ccId}
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='sdIdx != null and sdIdx != "" '>
+            AND SD.sd_idx = #{sdIdx}
+        </if>
+        <if test='sdName != null and sdName != "" '>
+            AND SD.sd_name = like concat( '%', #{sdName} ,'%')
+        </if>
+        ORDER BY WP.wp_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM sensor_district SD
+        INNER JOIN work_place WP ON WP.wp_id = SD.wp_id
+        WHERE 'x' = 'x'
+        <if test='ccId != null and ccId != "" '>
+            AND WP.cc_id = #{ccId}
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='sdIdx != null and sdIdx != "" '>
+            AND SD.sd_idx = #{sdIdx}
+        </if>
+        <if test='sdName != null and sdName != "" '>
+            AND SD.sd_name = like concat( '%', #{sdName} ,'%')
+        </if>
+    </select>
+
+
+    <!-- 센서관리 > 구역별센서 -->
+    <select id="findSensorSituationListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorDistrictDto">
+        SELECT
+            SD.sd_idx
+            ,SD.sd_name
+            ,SD.default_color
+            ,SD.flash_color
+            ,WP.wp_id
+            ,WP.wp_name
+            ,MCC.cc_id
+            ,MCC.cc_name
+            ,IFNULL((
+                select count(*)
+                from sensor_info SI
+                where SI.wp_id = WP.wp_id
+                <if test='siType != null and siType != "" '>
+                    AND SI.si_type = #{siType}
+                </if>
+                AND SI.sd_idx = SD.sd_idx
+            ), 0) AS sensor_count
+        FROM sensor_district SD
+        INNER JOIN work_place WP ON WP.wp_id = SD.wp_id
+        INNER JOIN con_company MCC ON MCC.cc_id = WP.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+                SELECT 1
+                FROM construction_site CS
+                WHERE CS.wp_id = WP.wp_id
+                AND CS.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+        ORDER BY WP.wp_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 센서관리 > 구역별센서 -->
+    <select id="findSensorSituationListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM sensor_district SD
+        INNER JOIN work_place WP ON WP.wp_id = SD.wp_id
+        INNER JOIN con_company MCC ON MCC.cc_id = WP.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS(
+                SELECT 1
+                FROM construction_site CS
+                WHERE CS.wp_id = WP.wp_id
+                AND CS.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorDistrictDto">
+        SELECT
+            SD.sd_idx
+             ,SD.sd_name
+             ,SD.sd_memo
+             ,WP.wp_id
+             ,WP.wp_name
+             ,SD.default_color
+             ,SD.flash_color
+        FROM sensor_district SD
+                 INNER JOIN work_place WP ON WP.wp_id = SD.wp_id
+        WHERE SD.sd_idx = #{sdIdx}
+    </select>
+
+
+
+    <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorDistrictDto">
+        INSERT INTO sensor_district (
+            wp_id
+            ,sd_name
+            ,sd_memo
+            ,default_color
+            ,flash_color
+        )
+        VALUES (
+            #{wpId}
+            , #{sdName}
+            , ''
+            , #{defaultColor,jdbcType=VARCHAR}
+            , #{flashColor,jdbcType=VARCHAR}
+        );
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorDistrictDto">
+        UPDATE sensor_district
+        SET
+          sd_name = #{sdName}
+          ,sd_memo = ''
+          ,default_color = #{defaultColor,jdbcType=VARCHAR}
+          ,flash_color = #{flashColor,jdbcType=VARCHAR}
+        WHERE sd_idx = #{sdIdx}
+    </update>
+</mapper>

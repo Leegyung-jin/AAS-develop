@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.ManagerTokenDao">
+
+    <!--  -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.ManagerTokenDto">
+        SELECT
+            MT.mt_idx
+            ,MT.mb_id
+            ,MT.mt_token
+            ,MT.mt_yn
+            ,MT.mt_datetime
+            ,G5M.app_version
+        from manager_token MT
+        inner join g5_member G5M on G5M.mb_id = MT.mb_id
+        WHERE 'x' = 'x'
+        <if test='mbId != null and mbId != "" '>
+            AND MT.mb_id = #{mbId}
+        </if>
+        <if test='mtYn != null '>
+            AND MT.mt_yn = #{mtYn}
+        </if>
+    </select>
+
+</mapper>

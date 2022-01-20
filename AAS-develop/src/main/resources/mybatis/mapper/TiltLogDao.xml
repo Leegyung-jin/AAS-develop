@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.TiltLogDao">
+  
+  <resultMap id="tiltDeviceStateResultMap" type="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosTiltDeviceStateVo" autoMapping="true">
+    <id property="idx" column="idx"/>
+    <collection property="tiltLogHistory"
+      ofType="kr.co.hulan.aas.mvc.model.dto.TiltLogDto"
+      column="{macAddress=tmac_address,historyCount=history_count}"
+      select="findTiltLogHistoryList"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  <select id="findTiltDeviceStateList"
+    parameterType="map"
+    resultMap="tiltDeviceStateResultMap">
+    SELECT
+      WDI.idx
+      ,WDI.wp_id
+      ,WP.wp_name
+      ,WDI.device_id
+      ,WDI.mac_address as mac_address
+      ,TLR.mac_address as tmac_address
+      ,120 as history_count
+      ,TLR.measure_time
+      ,TLR.display_name
+      ,TLR.tilt_x
+      ,TLR.tilt_y
+      ,TLR.tilt_z
+      ,IFNULL( TLR.dashboard_popup, 0 ) as dashboard_popup
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    LEFT JOIN tilt_log_recent TLR ON TLR.mac_address = WDI.mac_address
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='macAddress != null and macAddress != "" '>
+      AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+    </if>
+    <if test='deviceId != null and deviceId != "" '>
+      AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+    </if>
+    AND WDI.wp_id = #{wpId}
+    AND WDI.device_type = 6
+    ORDER BY WDI.update_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  
+  <select id="countTiltDeviceStateList"
+    parameterType="map"
+    resultType="int">
+    SELECT
+      count(*)
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='macAddress != null and macAddress != "" '>
+      AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+    </if>
+    <if test='deviceId != null and deviceId != "" '>
+      AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+    </if>
+    AND WDI.wp_id = #{wpId}
+    AND WDI.device_type = 6
+  </select>
+  
+  <select id="findTiltDeviceState"
+    resultMap="tiltDeviceStateResultMap">
+    SELECT
+      WDI.idx
+      ,WDI.wp_id
+      ,WP.wp_name
+      ,WDI.device_id
+      ,WDI.mac_address as mac_address
+      ,TLR.mac_address as tmac_address
+      ,120 as history_count
+      ,TLR.measure_time
+      ,TLR.display_name
+      ,TLR.tilt_x
+      ,TLR.tilt_y
+      ,TLR.tilt_z
+      ,IFNULL( TLR.dashboard_popup, 0 ) as dashboard_popup
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    LEFT JOIN tilt_log_recent TLR ON TLR.mac_address = WDI.mac_address
+    WHERE 'x' = 'x'
+    AND WDI.wp_id = #{wpId}
+    AND WDI.idx = #{idx}
+    AND WDI.device_type = 6
+  </select>
+  
+  
+  <select id="findTiltLogHistoryList"
+    resultType="kr.co.hulan.aas.mvc.model.dto.TiltLogDto">
+    SELECT *
+    FROM (
+      SELECT
+        TL.mac_address
+        ,TL.measure_time
+        ,TL.display_name
+        ,TL.tilt_x
+        ,TL.tilt_y
+        ,TL.tilt_z
+      FROM tilt_log TL
+      INNER JOIN work_device_info WDI ON WDI.mac_address = TL.mac_address
+      WHERE TL.mac_address = #{macAddress}
+      AND WDI.device_type = 6
+      ORDER BY TL.measure_time desc
+      LIMIT #{historyCount}
+    ) REV
+    ORDER BY REV.measure_time
+  </select>
+  
+</mapper>

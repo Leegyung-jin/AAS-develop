@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+
+    <settings>
+        <setting name="mapUnderscoreToCamelCase" value="true" />
+    </settings>
+
+    <typeAliases>
+<!--        <typeAlias alias="camelMap" type="kr.co.hulan.aas.code.utils.CamelMap"/>-->
+        <package name="kr.co.hulan.aas.mvc.api.model.dto.request" />
+        <package name="kr.co.hulan.aas.mvc.api.model.dto.response" />
+        <package name="kr.co.hulan.aas.mvc.api.model.dto.security" />
+    </typeAliases>
+
+
+</configuration>

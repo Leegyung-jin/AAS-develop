@@ -1,0 +1,572 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.GpsLocationDao">
+
+  <resultMap id="worker_Info" type="java.util.Map">
+    <id property="data_key" column="data_key"/>
+    <result property="data_type" column="data_type"/>
+    <result property="data_name" column="data_name"/>
+    <result property="mb_id" column="mb_id"/>
+    <result property="marker" column="marker"/>
+    <association property="worker_info" javaType="java.util.Map">
+      <result property="mb_id" column="mb_id"/>
+      <result property="mb_name" column="mb_name"/>
+      <result property="mb_level" column="mb_level"/>
+      <result property="mb_level_name" column="mb_level_name"/>
+      <result property="coop_mb_id" column="coop_mb_id"/>
+      <result property="coop_mb_name" column="coop_mb_name"/>
+      <result property="wp_id" column="wp_id"/>
+      <result property="wp_name" column="wp_name"/>
+      <result property="icon_url" column="icon_url"/>
+    </association>
+
+    <association property="gps_location" javaType="java.util.Map">
+      <result property="provider" column="provider"/>
+      <result property="longitude" column="longitude"/>
+      <result property="latitude" column="latitude"/>
+      <result property="altitude" column="altitude"/>
+      <result property="accuracy" column="accuracy"/>
+      <result property="speed" column="speed"/>
+      <result property="bearing" column="bearing"/>
+      <result property="bearing" column="bearing"/>
+      <result property="battery" column="battery"/>
+      <result property="measure_time" column="measure_time"/>
+    </association>
+
+    <association property="equipment_info" javaType="java.util.Map">
+      <result property="equipment_type" column="equipment_type"/>
+      <result property="equipment_name" column="equipment_name"/>
+      <result property="equipment_icon" column="equipment_icon"/>
+      <result property="equipment_no" column="equipment_no"/>
+      <result property="rtc_url" column="rtc_url"/>
+    </association>
+  </resultMap>
+
+  <resultMap id="work_device_Info" type="java.util.Map">
+    <id property="data_key" column="data_key"/>
+    <result property="data_type" column="data_type"/>
+    <result property="device_id" column="device_id"/>
+    <result property="data_name" column="data_name"/>
+    <result property="mb_id" column="mb_id"/>
+    <association property="worker_info" javaType="java.util.Map">
+      <result property="mb_id" column="mb_id"/>
+      <result property="mb_name" column="mb_name"/>
+      <result property="mb_level" column="mb_level"/>
+      <result property="mb_level_name" column="mb_level_name"/>
+      <result property="coop_mb_id" column="coop_mb_id"/>
+      <result property="coop_mb_name" column="coop_mb_name"/>
+      <result property="wp_id" column="wp_id"/>
+      <result property="wp_name" column="wp_name"/>
+      <result property="icon_url" column="icon_url"/>
+    </association>
+
+    <association property="gps_location" javaType="java.util.Map">
+      <result property="provider" column="provider"/>
+      <result property="longitude" column="longitude"/>
+      <result property="latitude" column="latitude"/>
+      <result property="altitude" column="altitude"/>
+      <result property="accuracy" column="accuracy"/>
+      <result property="speed" column="speed"/>
+      <result property="bearing" column="bearing"/>
+      <result property="bearing" column="bearing"/>
+      <result property="battery" column="battery"/>
+      <result property="measure_time" column="measure_time"/>
+    </association>
+
+    <association property="equipment_info" javaType="java.util.Map">
+      <result property="equipment_type" column="equipment_type"/>
+      <result property="equipment_name" column="equipment_name"/>
+      <result property="equipment_icon" column="equipment_icon"/>
+      <result property="equipment_no" column="equipment_no"/>
+    </association>
+  </resultMap>
+  
+  <resultMap id="gpsObjectInfo" type="kr.co.hulan.aas.mvc.api.monitor.dto.GpsObjectVo" autoMapping="true">
+    <id property="dataKey" column="data_key"/>
+    <association property="location" javaType="kr.co.hulan.aas.mvc.api.monitor.dto.GpsLocationVo" autoMapping="true">
+    </association>
+    <association property="owner" javaType="kr.co.hulan.aas.mvc.api.monitor.dto.GpsSenderVo" autoMapping="true">
+    </association>
+    <association property="equipment" javaType="kr.co.hulan.aas.mvc.api.monitor.dto.EquiptmentVo" autoMapping="true">
+    </association>
+  </resultMap>
+
+  <select id="selectGpsLocationWorker" parameterType="java.util.Map" resultMap="worker_Info">
+    SELECT
+      m.mb_id as data_key,
+      'worker' as data_type,
+      m.mb_name as data_name,
+      m.mb_id,
+      m.mb_name,
+      m.mb_level,
+      gl.wp_id,
+      wp.wp_name,
+      wpc.coop_mb_id,
+      wpc.coop_mb_name,
+      ei.equipment_type,
+      ei.rtc_url,
+      CASE ifnull(ei.equipment_type, 0) WHEN 0 THEN '근로자'  WHEN 1 THEN '덤프기사' ELSE '장비기사' END AS mb_level_name,
+      IFNULL( (
+        SELECT 1 FROM sensor_log_equipment sle WHERE sle.mb_id = gl.mb_id AND sle.expire_datetime > DATE_ADD(NOW(), interval -10 second ) LIMIT 1
+      ), 0 ) as warning_light,
+      IFNULL( (
+        select
+          CASE SLT.si_type
+          WHEN '출입용' then 10000
+          WHEN '안전조회' then 20000
+          WHEN '일반' then 30000
+          WHEN '위험지역 인접구역' then 40000
+          WHEN '위험지역' then 50000
+          WHEN '위험감시' then 55000
+          ELSE NULL END as sensor_scan
+        from sensor_log_trace SLT
+        where SLT.mb_id = gl.mb_id
+        and SLT.wp_id = gl.wp_id
+        and SLT.slt_out_datetime IS null
+        and SLT.slt_datetime between date_format( now(), '%Y-%m-%d 00:00:00') and date_format( now(), '%Y-%m-%d 23:59:59')
+        order by SLT.slt_datetime desc
+        LIMIT 1
+      ), 0 ) as sensor_scan_type,
+      ec.equipment_name,
+      <choose>
+        <when test='EQUIPMENT == "NOT_EQUIP" '>
+          ( SELECT expose_seq FROM icon_code WHERE icon_type = if( sensor_scan_type = 50000 OR warning_light = 1, 1, 0 ) ) as expose_seq,
+          ( SELECT icon_url   FROM icon_code WHERE icon_type = if( sensor_scan_type = 50000 OR warning_light = 1, 1, 0 ) ) as icon_url,
+        </when>
+        <when test='EQUIPMENT == "EQUIP" '>
+          ( SELECT expose_seq FROM icon_code WHERE icon_type = if( sensor_scan_type = 50000 OR warning_light = 1, 1, 5 ) ) as expose_seq,
+          ( SELECT icon_url FROM icon_code   WHERE icon_type = if( sensor_scan_type = 50000 OR warning_light = 1, 1, 5 )) as icon_url,
+        </when>
+        <otherwise>
+          ( SELECT expose_seq FROM icon_code WHERE icon_type = if( ifnull(ei.equipment_type, 0) NOT IN (1) and ( sensor_scan_type = 50000 OR warning_light = 1 ), 1, ifnull( ec.icon_type, 0) ) ) as expose_seq,
+          ( SELECT icon_url   FROM icon_code WHERE icon_type = if( ifnull(ei.equipment_type, 0) NOT IN (1) and ( sensor_scan_type = 50000 OR warning_light = 1 ), 1, ifnull( ec.icon_type, 0) ) ) as icon_url,
+        </otherwise>
+      </choose>
+      ei.equipment_no,
+      gl.provider,
+      gl.longitude,
+      gl.latitude,
+      gl.altitude,
+      gl.accuracy,
+      gl.speed,
+      gl.bearing,
+      gl.battery,
+      date_format(gl.measure_time, '%Y-%m-%d %H:%i:%s') AS measure_time,
+      <choose>
+        <when test='markerMbId != null and markerMbId != "" '>
+          case when m.mb_id = #{screenMbId} then 1 else 0 end as marker
+        </when>
+        <otherwise>
+          0 as marker
+        </otherwise>
+      </choose>
+    FROM gps_location gl
+    INNER JOIN g5_member m ON gl.mb_id = m.mb_id
+    LEFT JOIN work_place_coop wpc ON gl.coop_mb_id = wpc.coop_mb_id AND wpc.wp_id = gl.wp_id
+    LEFT JOIN work_place wp ON gl.wp_id = wp.wp_id
+    LEFT JOIN work_place_worker wpw ON wpw.wp_id = gl.wp_id AND wpw.coop_mb_id = gl.coop_mb_id AND wpw.worker_mb_id = gl.mb_id
+    LEFT JOIN work_equipment_info ei ON gl.mb_id = ei.mb_id AND gl.wp_id = ei.wp_id
+    LEFT JOIN equipment_code ec ON ei.equipment_type = ec.equipment_type
+    WHERE gl.wp_id = #{wp_id}
+    AND wpw.wpw_out = 0
+    AND gl.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    <choose>
+      <when test='EQUIPMENT == "EQUIP" '>
+        and (ei.equipment_type is NOT NULL AND ei.device_id is not null and ei.device_id != '' )
+      </when>
+      <when test='EQUIPMENT == "NOT_EQUIP" '>
+        and ei.equipment_type IS NULL
+      </when>
+    </choose>
+    and gl.mb_id is not null and gl.device_id is null
+    ORDER BY expose_seq ASC , gl.measure_time DESC
+  </select>
+
+  <select id="selectGpsLocationEquipment" parameterType="java.util.Map" resultMap="work_device_Info">
+    select *
+    from (
+    select
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN ei.device_id ELSE m.mb_id END as data_key,
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN 'device' ELSE  'worker' END as data_type,
+        concat( ec.equipment_name, '(', ei.equipment_no, ')' ) as data_name,
+        ei.device_id,
+        gl.wp_id,
+        wp.wp_name,
+        wpc.coop_mb_id,
+        wpc.coop_mb_name,
+        ei.equipment_type,
+        ei.rtc_url,
+        ec.equipment_name,
+        (select icon_url FROM icon_code WHERE icon_type = ifnull(ec.icon_type, 0)) as icon_url,
+        (select expose_seq FROM icon_code WHERE icon_type = ifnull(ec.icon_type, 0)) as expose_seq,
+        ei.equipment_no,
+        m.mb_id,
+        m.mb_name,
+        gl.provider,
+        gl.longitude,
+        gl.latitude,
+        gl.altitude,
+        gl.accuracy,
+        gl.speed,
+        gl.bearing,
+        gl.battery,
+        date_format(gl.measure_time, '%Y-%m-%d %H:%i:%s') AS measure_time
+    from gps_location gl
+             inner join work_equipment_info ei on gl.mb_id = ei.mb_id and gl.wp_id = ei.wp_id
+             LEFT JOIN equipment_code ec ON ei.equipment_type = ec.equipment_type
+             LEFT JOIN g5_member m ON ei.mb_id = m.mb_id
+             LEFT JOIN work_place_coop wpc ON gl.coop_mb_id = wpc.coop_mb_id AND wpc.wp_id = gl.wp_id
+             LEFT JOIN work_place wp ON gl.wp_id = wp.wp_id
+             LEFT JOIN work_place_worker wpw ON wpw.wp_id = gl.wp_id AND wpw.coop_mb_id = gl.coop_mb_id AND wpw.worker_mb_id = gl.mb_id
+    WHERE gl.wp_id = #{wp_id}
+      AND gl.mb_id is not null
+      AND ( ei.device_id is null or ei.device_id = '' )
+      AND gl.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    union
+    select
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN ei.device_id ELSE m.mb_id END as data_key,
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN 'device' ELSE  'worker' END as data_type,
+        concat( ec.equipment_name, '(', ei.equipment_no, ')' ) as data_name,
+        ei.device_id,
+        gl.wp_id,
+        wp.wp_name,
+        wpc.coop_mb_id,
+        wpc.coop_mb_name,
+        ei.equipment_type,
+        ei.rtc_url,
+        ec.equipment_name,
+        (select icon_url FROM icon_code WHERE icon_type = ifnull(ec.icon_type, 0)) as icon_url,
+        (select expose_seq FROM icon_code WHERE icon_type = ifnull(ec.icon_type, 0)) as expose_seq,
+        ei.equipment_no,
+        m.mb_id,
+        m.mb_name,
+        gl.provider,
+        gl.longitude,
+        gl.latitude,
+        gl.altitude,
+        gl.accuracy,
+        gl.speed,
+        gl.bearing,
+        gl.battery,
+        date_format(gl.measure_time, '%Y-%m-%d %H:%i:%s') AS measure_time
+    from gps_location gl
+             inner join work_equipment_info ei on gl.device_id = ei.device_id and gl.wp_id = ei.wp_id
+             LEFT JOIN equipment_code ec ON ei.equipment_type = ec.equipment_type
+             LEFT JOIN g5_member m ON ei.mb_id = m.mb_id
+             LEFT JOIN work_place_coop wpc ON gl.coop_mb_id = wpc.coop_mb_id AND wpc.wp_id = gl.wp_id
+             LEFT JOIN work_place wp ON gl.wp_id = wp.wp_id
+             LEFT JOIN work_place_worker wpw ON wpw.wp_id = gl.wp_id AND wpw.coop_mb_id = gl.coop_mb_id AND wpw.worker_mb_id = ei.mb_id
+    WHERE gl.wp_id = #{wp_id}
+      AND gl.mb_id is null and gl.device_id is not null
+      AND gl.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    ) result
+    ORDER BY result.expose_seq ASC, result.measure_time DESC
+	</select>
+
+
+  <select id="selectGpsLocationHistory" parameterType="java.util.Map" resultType="kr.co.hulan.aas.mvc.model.dto.GpsLocationHistoryDto">
+    SELECT
+      GLH.seq,
+      GLH.wp_id,
+      GLH.coop_mb_id,
+      GLH.mb_id,
+      GLH.device_id,
+      GLH.provider,
+      GLH.longitude,
+      GLH.latitude,
+      GLH.altitude,
+      GLH.accuracy,
+      GLH.speed,
+      GLH.bearing,
+      GLH.battery,
+      GLH.sensor_scan,
+      GLH.measure_time,
+      IFNULL( ( select icon_url from icon_code where icon_type = 0 ), '') AS icon_url
+    FROM gps_location_hist GLH
+    <choose>
+      <when test='dataType eq "worker" and dataKey != null '>
+        LEFT join work_equipment_info ei on GLH.mb_id = ei.mb_id and GLH.wp_id = ei.wp_id
+        WHERE GLH.wp_id = #{wpId}
+        AND ( GLH.device_id is null or GLH.device_id = '' )
+        AND GLH.mb_id = #{dataKey}
+      </when>
+      <when test='dataType eq "device" and dataKey != null '>
+        LEFT join work_equipment_info ei on GLH.device_id = ei.device_id and GLH.wp_id = ei.wp_id
+        WHERE GLH.wp_id = #{wpId}
+        AND ( GLH.mb_id is null or GLH.mb_id = '' )
+        AND GLH.device_id = #{dataKey}
+      </when>
+      <otherwise>
+        WHERE 'x' = 'Y'
+      </otherwise>
+    </choose>
+    <choose>
+      <when test='startDate != null'>
+        AND GLH.measure_time <![CDATA[ >= ]]> #{startDate}
+      </when>
+      <otherwise>
+        AND GLH.measure_time <![CDATA[ >= ]]> DATE(NOW())
+      </otherwise>
+    </choose>
+    <choose>
+      <when test='endDate != null'>
+        AND GLH.measure_time <![CDATA[ <= ]]> #{endDate}
+      </when>
+      <otherwise>
+        AND GLH.measure_time <![CDATA[ < ]]> DATE(DATE_ADD( NOW(), interval 1 day ))
+      </otherwise>
+    </choose>
+    ORDER BY GLH.measure_time ASC
+  </select>
+
+  <!--
+  두 좌표간 거리 구하기
+  (6371*acos(cos(radians(T_LAT))*cos(radians(P_LAT))*cos(radians(P_LON)
+	-radians(T_LON))+sin(radians(T_LAT))*sin(radians(P_LAT))))
+	AS distance
+  -->
+
+  <select id="searchGpsUser" parameterType="java.util.Map" resultType="kr.co.hulan.aas.mvc.api.gps.controller.response.GpsUserVo">
+    SELECT
+      m.mb_id,
+      m.mb_name,
+      m.mb_tel AS telephone,
+      gl.wp_id,
+      wp.wp_name,
+      wpc.coop_mb_id,
+      wpc.coop_mb_name,
+      CASE ifnull(ei.equipment_type, 0)
+        WHEN 0 THEN '근로자'
+        WHEN 1 THEN '덤프기사'
+        ELSE '장비기사'
+      END AS mb_level_name,
+      gl.longitude,
+      gl.latitude,
+      date_format(gl.measure_time, '%Y-%m-%d %H:%i:%s') AS measure_time
+    FROM gps_location gl
+    INNER JOIN work_place wp ON gl.wp_id = wp.wp_id
+    INNER JOIN g5_member m ON gl.mb_id = m.mb_id
+    INNER JOIN work_place_worker wpw ON wpw.wp_id = gl.wp_id AND wpw.worker_mb_id =  gl.mb_id AND wpw.wpw_out = 0
+    LEFT JOIN work_place_coop wpc ON wpw.coop_mb_id = wpc.coop_mb_id AND wpc.wp_id = wpw.wp_id
+    LEFT JOIN work_equipment_info ei ON gl.mb_id = ei.mb_id AND gl.wp_id = ei.wp_id
+    LEFT JOIN equipment_code ec ON ei.equipment_type = ec.equipment_type
+    WHERE gl.wp_id = #{wpId}
+    AND gl.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    and gl.mb_id is not null
+    <if test='mbName != null and mbName != "" ' >
+      AND m.mb_name like concat('%', #{mbName}, '%')
+    </if>
+    ORDER BY gl.measure_time DESC
+  </select>
+  
+  
+  
+  <!-- 안전모니터링 4.1 -->
+  <select id="findGpsLocationWorker" parameterType="java.util.Map" resultMap="gpsObjectInfo">
+    SELECT
+    m.mb_id as data_key,
+    'worker' as data_type,
+    m.mb_name as data_name,
+    gl.longitude,
+    gl.latitude,
+    gl.altitude,
+    gl.accuracy,
+    gl.speed,
+    gl.bearing,
+    gl.battery,
+    date_format(gl.measure_time, '%Y-%m-%d %H:%i:%s') AS measure_time,
+    gl.wp_id,
+    wp.wp_name,
+    wpc.coop_mb_id,
+    wpc.coop_mb_name,
+    m.mb_id,
+    m.mb_name,
+    CASE ifnull(ei.equipment_type, 0) WHEN 0 THEN '근로자'  WHEN 1 THEN '덤프기사' ELSE '장비기사' END AS mb_type_name,
+    gl.device_id,
+    ei.equipment_type,
+    ec.equipment_name,
+    ei.equipment_no,
+    IFNULL( (
+        SELECT 1 FROM sensor_log_equipment sle WHERE sle.mb_id = gl.mb_id AND sle.expire_datetime > DATE_ADD(NOW(), interval -10 second ) LIMIT 1
+    ), 0 ) as warning_light,
+    IFNULL( (
+      select
+      CASE SLT.si_type
+      WHEN '출입용' then 10000
+      WHEN '안전조회' then 20000
+      WHEN '일반' then 30000
+      WHEN '위험지역 인접구역' then 40000
+      WHEN '위험지역' then 50000
+      WHEN '위험감시' then 55000
+      ELSE NULL END as sensor_scan
+      from sensor_log_trace SLT
+      where SLT.mb_id = gl.mb_id
+      and SLT.wp_id = gl.wp_id
+      and SLT.slt_out_datetime IS null
+      and SLT.slt_datetime between date_format( now(), '%Y-%m-%d 00:00:00') and date_format( now(), '%Y-%m-%d 23:59:59')
+      order by SLT.slt_datetime desc
+      LIMIT 1
+    ), 0 ) as sensor_scan_type,
+    <choose>
+      <when test='EQUIPMENT == "NOT_EQUIP" '>
+        ( SELECT icon_url   FROM icon_code WHERE icon_type = if( sensor_scan_type = 50000 OR warning_light = 1, 1, 0 ) ) as icon_url,
+      </when>
+      <when test='EQUIPMENT == "EQUIP" '>
+        ( SELECT icon_url FROM icon_code   WHERE icon_type = if( sensor_scan_type = 50000 OR warning_light = 1, 1, 5 )) as icon_url,
+      </when>
+      <otherwise>
+        ( SELECT icon_url   FROM icon_code WHERE icon_type = if( ifnull(ei.equipment_type, 0) NOT IN (1) and ( sensor_scan_type = 50000 OR warning_light = 1 ), 1, ifnull( ec.icon_type, 0) ) ) as icon_url,
+      </otherwise>
+    </choose>
+    <choose>
+      <when test='markerMbId != null and markerMbId != "" '>
+        case when m.mb_id = #{markerMbId} then 1 else 0 end as marker
+      </when>
+      <otherwise>
+        0 as marker
+      </otherwise>
+    </choose>
+    FROM gps_location gl
+    INNER JOIN g5_member m ON gl.mb_id = m.mb_id
+    INNER JOIN work_place_worker wpw ON wpw.wp_id = gl.wp_id AND wpw.worker_mb_id = gl.mb_id AND wpw.wpw_out = 0
+    LEFT JOIN work_place_coop wpc ON wpc.wp_id = wpw.wp_id AND wpc.coop_mb_id = wpw.coop_mb_id
+    LEFT JOIN work_place wp ON gl.wp_id = wp.wp_id
+    LEFT JOIN work_equipment_info ei ON gl.mb_id = ei.mb_id AND gl.wp_id = ei.wp_id
+        AND (
+          ei.ope_type = 0
+          OR (
+              ei.ope_type = 1 AND ei.ope_start <![CDATA[<=]]> NOW() AND ei.ope_end <![CDATA[>=]]> NOW()
+          )
+        )
+    LEFT JOIN equipment_code ec ON ei.equipment_type = ec.equipment_type
+    WHERE gl.wp_id = #{wpId}
+    AND gl.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    <choose>
+      <when test='EQUIPMENT == "EQUIP" '>
+        and ei.equipment_type is NOT NULL  AND ei.device_id is not null  and ei.device_id != ''
+      </when>
+      <when test='EQUIPMENT == "NOT_EQUIP" '>
+        and ei.equipment_type IS NULL
+      </when>
+    </choose>
+    and gl.mb_id is not null and gl.device_id is null
+    ORDER BY gl.measure_time DESC
+  </select>
+  
+  <select id="findGpsLocationEquipment" parameterType="java.util.Map" resultMap="gpsObjectInfo">
+    select *
+    from (
+    select
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN ei.device_id ELSE m.mb_id END as data_key,
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN 'device' ELSE  'worker' END as data_type,
+        concat( ec.equipment_name, '(', ei.equipment_no, ')' ) as data_name,
+        gl.longitude,
+        gl.latitude,
+        gl.altitude,
+        gl.accuracy,
+        gl.speed,
+        gl.bearing,
+        gl.battery,
+        date_format(gl.measure_time, '%Y-%m-%d %H:%i:%s') AS measure_time,
+        gl.wp_id,
+        wp.wp_name,
+        wpc.coop_mb_id,
+        wpc.coop_mb_name,
+        m.mb_id,
+        m.mb_name,
+        CASE
+          WHEN m.mb_id IS NULL THEN NULL
+          WHEN ifnull(ei.equipment_type, 0) = 0 THEN '근로자'
+          WHEN ifnull(ei.equipment_type, 0) = 1 THEN '덤프기사'
+          ELSE '장비기사'
+        END AS mb_level_name,
+        ei.device_id,
+        ei.equipment_type,
+        ec.equipment_name,
+        ei.equipment_no,
+        (select icon_url FROM icon_code WHERE icon_type = ifnull(ec.icon_type, 0)) as icon_url,
+        <choose>
+          <when test='markerMbId != null and markerMbId != "" '>
+            case when m.mb_id = #{markerMbId} then 1 else 0 end as marker
+          </when>
+          <otherwise>
+            0 as marker
+          </otherwise>
+        </choose>
+    from gps_location gl
+    inner join work_equipment_info ei on gl.mb_id = ei.mb_id and gl.wp_id = ei.wp_id
+      AND (
+        ei.ope_type = 0
+        OR (
+            ei.ope_type = 1 AND ei.ope_start <![CDATA[<=]]> NOW() AND ei.ope_end <![CDATA[>=]]> NOW()
+        )
+      )
+    LEFT JOIN equipment_code ec ON ei.equipment_type = ec.equipment_type
+    LEFT JOIN g5_member m ON ei.mb_id = m.mb_id
+    LEFT JOIN work_place_worker wpw ON wpw.wp_id = gl.wp_id AND wpw.worker_mb_id = gl.mb_id AND wpw.wpw_out = 0
+    LEFT JOIN work_place_coop wpc ON ei.wp_id = wpc.wp_id AND wpc.coop_mb_id = ei.coop_mb_id
+    LEFT JOIN work_place wp ON gl.wp_id = wp.wp_id
+    WHERE gl.wp_id = #{wpId}
+    AND gl.mb_id is not null
+    AND ( ei.device_id is null or ei.device_id = '' )
+    AND gl.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    union
+    select
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN ei.device_id ELSE m.mb_id END as data_key,
+        CASE WHEN ei.device_id IS NOT NULL and ei.device_id != '' THEN 'device' ELSE  'worker' END as data_type,
+        concat( ec.equipment_name, '(', ei.equipment_no, ')' ) as data_name,
+        gl.longitude,
+        gl.latitude,
+        gl.altitude,
+        gl.accuracy,
+        gl.speed,
+        gl.bearing,
+        gl.battery,
+        date_format(gl.measure_time, '%Y-%m-%d %H:%i:%s') AS measure_time,
+        gl.wp_id,
+        wp.wp_name,
+        wpc.coop_mb_id,
+        wpc.coop_mb_name,
+        m.mb_id,
+        m.mb_name,
+        CASE
+          WHEN m.mb_id IS NULL THEN NULL
+          WHEN ifnull(ei.equipment_type, 0) = 0 THEN '근로자'
+          WHEN ifnull(ei.equipment_type, 0) = 1 THEN '덤프기사'
+          ELSE '장비기사'
+        END AS mb_level_name,
+        ei.device_id,
+        ei.equipment_type,
+        ec.equipment_name,
+        ei.equipment_no,
+        (select icon_url FROM icon_code WHERE icon_type = ifnull(ec.icon_type, 0)) as icon_url,
+        <choose>
+          <when test='markerMbId != null and markerMbId != "" '>
+            case when m.mb_id = #{markerMbId} then 1 else 0 end as marker
+          </when>
+          <otherwise>
+            0 as marker
+          </otherwise>
+        </choose>
+    from gps_location gl
+    inner JOIN work_place wp ON gl.wp_id = wp.wp_id
+    inner join work_equipment_info ei on gl.device_id = ei.device_id and gl.wp_id = ei.wp_id
+      AND (
+        ei.ope_type = 0
+        OR (
+            ei.ope_type = 1 AND ei.ope_start <![CDATA[<=]]> NOW() AND ei.ope_end <![CDATA[>=]]> NOW()
+        )
+      )
+    LEFT JOIN equipment_code ec ON ei.equipment_type = ec.equipment_type
+    LEFT JOIN g5_member m ON ei.mb_id = m.mb_id
+    LEFT JOIN work_place_worker wpw ON wpw.wp_id = ei.wp_id AND wpw.worker_mb_id = ei.mb_id AND wpw.wpw_out = 0
+    LEFT JOIN work_place_coop wpc ON ei.coop_mb_id = wpc.coop_mb_id AND wpc.wp_id = ei.wp_id
+    WHERE gl.wp_id = #{wpId}
+      AND gl.mb_id is null and gl.device_id is not null
+      AND gl.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+    ) result
+    ORDER BY result.measure_time DESC
+	</select>
+
+</mapper>

@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.NvrEventDao">
+  
+  <resultMap id="NvrEventSummaryMap" type="kr.co.hulan.aas.mvc.api.monitor4_2.vo.nvr.NvrEventSummaryVo" autoMapping="true">
+    <id property="eventNo" column="event_no"/>
+    <collection property="eventFileList"
+      ofType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.nvr.NvrEventFileVo"
+      columnPrefix="nvref_"
+      notNullColumn="file_no"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  <resultMap id="NvrEventDetailMap" type="kr.co.hulan.aas.mvc.api.monitor4_2.vo.nvr.NvrEventDetailVo" autoMapping="true">
+    <id property="eventNo" column="event_no"/>
+    <collection property="eventFileList"
+      ofType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.nvr.NvrEventFileVo"
+      columnPrefix="nvref_"
+      notNullColumn="file_no"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  
+  <sql id="nvrEventFileColumn">
+    ${alias}.file_no as ${alias_column}file_no
+    ,${alias}.event_no as ${alias_column}event_no
+    ,${alias}.elog_no as ${alias_column}elog_no
+    ,${alias}.stat as ${alias_column}stat
+    ,${alias}.file_name as ${alias_column}file_name
+    ,${alias}.file_path as ${alias_column}file_path
+    ,${alias}.file_location as ${alias_column}file_location
+    ,${alias}.create_date as ${alias_column}create_date
+  </sql>
+  
+  <!-- 지능형 CCTV ( IntelliVix ) 이벤트 리스트 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultMap="NvrEventSummaryMap">
+    SELECT
+      RES.*,
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.NvrEventDao.nvrEventFileColumn">
+        <property name="alias" value="NVREF"/><property name="alias_column" value="nvref_"/>
+      </include>
+    FROM (
+      SELECT
+        NE.event_no
+        ,NE.elog_id
+        ,NE.start_elog_no
+        ,NE.start_tm
+        ,NE.end_elog_no
+        ,NE.end_tm
+        ,NE.event_duration
+        ,NVR.wp_id
+        ,WP.wp_name
+        ,NE.nvr_no
+        ,NVR.nvr_name
+        ,NE.gid
+        ,NVRC.name as gname
+        ,NE.id
+        ,NE.type
+        ,NE.stat
+        ,NE.pattr
+        ,NE.ezn
+        ,NE.action_status
+        ,NE.action_method
+        ,NE.action_end_date
+        ,NE.action_end_treator
+        ,NE.create_date
+        ,NE.update_date
+      FROM network_video_recoder NVR
+      INNER JOIN work_place WP ON WP.wp_id = NVR.wp_id
+      INNER JOIN network_video_recoder_ch NVRC ON NVR.nvr_no = NVRC.nvr_no
+      INNER JOIN nvr_event NE ON NVRC.gid = NE.gid
+      WHERE 'x' = 'x'
+      <if test='COMPLEX != null and COMPLEX != "" '>
+        AND (
+          NVRC.name like concat( '%', #{COMPLEX} ,'%')
+          OR
+          NVR.nvr_name like concat( '%', #{COMPLEX} ,'%')
+        )
+      </if>
+      <if test='nvrName != null and nvrName != "" '>
+        AND NVR.nvr_name like concat( '%', #{nvrName} ,'%')
+      </if>
+      <if test='gname != null and gname != "" '>
+        AND NVRC.name like concat( '%', #{gname} ,'%')
+      </if>
+      <if test='wpId != null and wpId != "" '>
+        AND NVR.wp_id #{wpId}
+      </if>
+      <if test='gid != null and gid != "" '>
+        AND NE.gid = #{gid}
+      </if>
+      <if test='type != null and type != "" '>
+        AND NE.type = #{type}
+      </if>
+      <if test='actionStatus != null '>
+        AND NE.action_status = #{actionStatus}
+      </if>
+      <if test='startDate != null'>
+        AND NE.start_tm >= DATE( #{startDate} )
+      </if>
+      <if test='endDate != null'>
+        AND NE.start_tm <![CDATA[ < ]]> DATE_ADD( DATE( #{endDate} ) , interval 1 day )
+      </if>
+      ORDER BY <choose>
+        <when test='ordBy != null and ordBy == 1'>NE.event_no </when>
+        <when test='ordBy != null and ordBy == 2'>NVRC.name </when>
+        <when test='ordBy != null and ordBy == 3'>NE.type </when>
+        <otherwise>NE.start_tm </otherwise>
+      </choose>
+      <choose>
+        <when test='ordAsc != null and ordAsc == 1'> ASC</when>
+        <otherwise> DESC</otherwise>
+      </choose>
+      <if test="startRow != null and pageSize != null ">
+        LIMIT #{startRow}, #{pageSize}
+      </if>
+    ) RES
+    LEFT JOIN nvr_event_file NVREF ON NVREF.event_no = RES.event_no
+    ORDER BY <choose>
+      <when test='ordBy != null and ordBy == 1'>RES.event_no </when>
+      <when test='ordBy != null and ordBy == 2'>RES.name </when>
+      <when test='ordBy != null and ordBy == 3'>RES.type </when>
+      <otherwise>RES.start_tm </otherwise>
+    </choose>
+    <choose>
+      <when test='ordAsc != null and ordAsc == 1'> ASC</when>
+      <otherwise> DESC</otherwise>
+    </choose>
+  </select>
+  
+  <!-- 지능형 CCTV ( IntelliVix ) 이벤트 리스트 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM network_video_recoder NVR
+    INNER JOIN work_place WP ON WP.wp_id = NVR.wp_id
+    INNER JOIN network_video_recoder_ch NVRC ON NVR.nvr_no = NVRC.nvr_no
+    INNER JOIN nvr_event NE ON NVRC.gid = NE.gid
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        NVRC.name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        NVR.nvr_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='nvrName != null and nvrName != "" '>
+      AND NVR.nvr_name like concat( '%', #{nvrName} ,'%')
+    </if>
+    <if test='gname != null and gname != "" '>
+      AND NVRC.name like concat( '%', #{gname} ,'%')
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND NVR.wp_id #{wpId}
+    </if>
+    <if test='gid != null and gid != "" '>
+      AND NE.gid = #{gid}
+    </if>
+    <if test='type != null and type != "" '>
+      AND NE.type = #{type}
+    </if>
+    <if test='actionStatus != null '>
+      AND NE.action_status = #{actionStatus}
+    </if>
+    <if test='startDate != null'>
+      AND NE.start_tm >= DATE( #{startDate} )
+    </if>
+    <if test='endDate != null'>
+      AND NE.start_tm <![CDATA[ < ]]> DATE_ADD( DATE( #{endDate} ) , interval 1 day )
+    </if>
+  </select>
+  
+  <select id="findById"
+    resultMap="NvrEventDetailMap">
+    SELECT
+      NE.event_no
+         ,NE.elog_id
+         ,NE.start_elog_no
+         ,NE.start_tm
+         ,NE.end_elog_no
+         ,NE.end_tm
+         ,NE.event_duration
+         ,NVR.wp_id
+         ,WP.wp_name
+         ,NE.nvr_no
+         ,NVR.nvr_name
+         ,NE.gid
+         ,NVRC.name  as gname
+         ,NE.id
+         ,NE.type
+         ,NE.stat
+         ,NE.pattr
+         ,NE.ezn
+         ,NE.action_status
+         ,NE.action_method
+         ,NE.action_end_date
+         ,NE.action_end_treator
+         ,NE.memo
+         ,NE.create_date
+         ,NE.update_date
+         ,NE.updater
+         ,<include refid="kr.co.hulan.aas.mvc.dao.mapper.NvrEventDao.nvrEventFileColumn">
+            <property name="alias" value="NVREF"/><property name="alias_column" value="nvref_"/>
+          </include>
+    FROM nvr_event NE
+    INNER JOIN network_video_recoder_ch NVRC ON NE.gid = NVRC.gid
+    INNER JOIN network_video_recoder NVR ON NE.nvr_no = NVR.nvr_no
+    INNER JOIN work_place WP ON WP.wp_id = NVR.wp_id
+    LEFT JOIN nvr_event_file NVREF ON NVREF.event_no = NE.event_no
+    WHERE NE.event_no = #{eventNo}
+  </select>
+  
+
+</mapper>

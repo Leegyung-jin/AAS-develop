@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorPolicyInfoDao">
+
+    <!-- 센서관리 > 센서정책관리 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        SELECT
+            SPI.sp_idx
+            ,SPI.si_type
+            ,SPI.minor_min
+            ,SPI.minor_max
+            ,SPI.scan_interval
+            ,SPI.idle_interval
+            ,SPI.report_interval
+            ,SPI.create_date
+            ,SPI.update_date
+            ,SPI.mb_id
+            ,WP.wp_id
+            ,WP.wp_name
+            ,WP.cc_id
+            ,WP.cc_name
+        FROM sensor_policy_info SPI
+            INNER JOIN work_place WP ON WP.wp_id = SPI.wp_id
+        WHERE WP.wp_id IS NOT NULL
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WP.cc_id = #{ccId}
+        </if>
+        <if test='siType != null and siType != "" '>
+            AND SPI.si_type = #{siType}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND WP.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+        ORDER BY WP.wp_datetime DESC, SPI.si_type DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 센서관리 > 센서정책관리 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM sensor_policy_info SPI
+        INNER JOIN work_place WP ON WP.wp_id = SPI.wp_id
+        WHERE WP.wp_id IS NOT NULL
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND WP.cc_id = #{ccId}
+        </if>
+        <if test='siType != null and siType != "" '>
+            AND SPI.si_type = #{siType}
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND WP.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+    </select>
+
+
+    <select id="findSiTypeCodeList"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        SELECT
+            SPI.si_type
+        FROM sensor_policy_info SPI
+        WHERE SPI.wp_id IS NULL
+        AND SPI.si_type != 'default'
+        ORDER BY SPI.si_type DESC
+    </select>
+
+
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        SELECT
+            SPI.sp_idx
+            ,SPI.si_type
+            ,SPI.minor_min
+            ,SPI.minor_max
+            ,SPI.scan_interval
+            ,SPI.idle_interval
+            ,SPI.report_interval
+            ,SPI.create_date
+            ,SPI.update_date
+            ,SPI.mb_id
+            ,WP.wp_id
+            ,WP.wp_name
+             ,WP.cc_id
+             ,WP.cc_name
+        FROM sensor_policy_info SPI
+            INNER JOIN work_place WP ON WP.wp_id = SPI.wp_id
+        WHERE SPI.sp_idx = #{spIdx}
+    </select>
+
+
+    <select id="findByRange"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        SELECT
+            SPI.sp_idx
+             ,SPI.si_type
+             ,SPI.minor_min
+             ,SPI.minor_max
+             ,SPI.scan_interval
+             ,SPI.idle_interval
+             ,SPI.report_interval
+             ,SPI.create_date
+             ,SPI.update_date
+             ,SPI.mb_id
+             ,WP.wp_id
+             ,WP.wp_name
+             ,WP.cc_id
+             ,WP.cc_name
+        FROM sensor_policy_info SPI
+                 INNER JOIN work_place WP ON WP.wp_id = SPI.wp_id
+        WHERE SPI.minor_min <![CDATA[ <= ]]> #{minor}
+        AND SPI.minor_max <![CDATA[ >= ]]> #{minor}
+        AND SPI.wp_id = #{wpId}
+        LIMIT 1
+    </select>
+
+    <!--
+    <insert id="createOrUpdate" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        INSERT INTO sensor_policy_info (
+              si_type
+             ,minor_min
+             ,minor_max
+             ,scan_interval
+             ,idle_interval
+             ,report_interval
+             ,wp_id
+             ,wp_name
+             ,create_date
+             ,update_date
+             ,mb_id
+        )
+        VALUES (
+            #{siType}
+            , #{minorMin}
+            , #{minorMax}
+            , #{scanInterval}
+            , #{idleInterval}
+            , #{reportInterval}
+            , #{wpId}
+            , #{wpName}
+            , NOW()
+            , NOW()
+            , #{mbId}
+        )
+        ON DUPLICATE KEY UPDATE
+            scan_interval = #{scanInterval}
+            ,idle_interval = #{idleInterval}
+            ,report_interval = #{reportInterval}
+            ,update_date = NOW()
+            ,mb_id = #{mbId}
+    </insert>
+    -->
+
+    <insert id="createDefaultPolicy" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        INSERT INTO sensor_policy_info (
+            si_type
+            ,minor_min
+            ,minor_max
+            ,scan_interval
+            ,idle_interval
+            ,report_interval
+            ,wp_id
+            ,wp_name
+            ,create_date
+            ,update_date
+            ,mb_id
+        )
+        SELECT
+            SPI.si_type
+             ,SPI.minor_min
+             ,SPI.minor_max
+             ,SPI.scan_interval
+             ,SPI.idle_interval
+             ,SPI.report_interval
+             ,WP.wp_id
+             ,WP.wp_name
+             ,NOW()
+             ,NOW()
+             ,#{mbId}
+        FROM sensor_policy_info SPI, work_place WP
+        WHERE WP.wp_id = #{wpId}
+        AND WP.wp_id IS NOT NULL
+        AND SPI.wp_id IS NULL
+        AND SPI.si_type != 'default'
+    </insert>
+
+    <update id="update" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        UPDATE sensor_policy_info
+        SET
+          scan_interval = #{scanInterval}
+          ,idle_interval = #{idleInterval}
+          ,report_interval = #{reportInterval}
+          ,update_date = NOW()
+          ,mb_id = #{mbId}
+        WHERE sp_idx = #{spIdx}
+    </update>
+
+    <update id="resetPolicy" parameterType="kr.co.hulan.aas.mvc.model.dto.SensorPolicyInfoDto">
+        UPDATE sensor_policy_info SPI
+          INNER JOIN sensor_policy_info DFSPI
+            ON DFSPI.si_type = SPI.si_type AND DFSPI.wp_id IS NULL
+        SET
+            SPI.scan_interval = DFSPI.scan_interval
+            ,SPI.idle_interval = DFSPI.idle_interval
+            ,SPI.report_interval = DFSPI.report_interval
+            ,SPI.update_date = NOW()
+            ,SPI.mb_id = #{mbId}
+        WHERE SPI.sp_idx = #{spIdx}
+    </update>
+
+</mapper>

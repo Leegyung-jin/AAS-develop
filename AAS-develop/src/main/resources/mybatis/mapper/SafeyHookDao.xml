@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SafeyHookDao">
+  
+  <!-- IMOS 안전고리 컴포넌트 현재 현황 -->
+  <select id="findCurrentState"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.controller.response.ImosSafetyHookCurrentStateResponse">
+    select
+      IFNULL( sum( SHS.pairing_status ), 0) as pairing_cnt,
+      IFNULL( sum( case when SHS.pairing_status = 1 and SHS.district_enter_status = 1 then 1 else 0 end ), 0) as district_worker_cnt,
+      IFNULL( sum( case when SHS.pairing_status = 1 and SHS.district_enter_status = 1 and lock_status = 1 then 1 else 0 end ), 0) as lock_cnt
+    from work_place_worker WPW
+    inner join safety_hook_state SHS ON WPW.worker_mb_id = SHS.mb_id
+    left join worker_device_status WDS on WDS.mb_id = WPW.worker_mb_id
+    where WPW.wp_id = #{wpId}
+      AND WPW.wpw_out = 0
+      AND SHS.update_date >= DATE(NOW())
+      AND SHS.pairing_status = 1
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+  </select>
+  <!--
+      현장 출건 조건 제외. 차후 고려
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.SensorLogInoutDao.AndAttendanceWorker">
+    <property name="aliasWorkplaceWorker" value="WPW"/>
+  </include>
+  -->
+  
+  
+  <!-- IMOS 안전고리 컴포넌트 협력사별 현황 -->
+  <select id="findCurrentCoopStateList"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosSafetyHookCoopStateVo">
+    select
+      WPC.coop_mb_id,
+      IFNULL(( select mb_name from g5_member G5COOP where G5COOP.mb_id = WPC.coop_mb_id LIMIT 1),'') as coop_mb_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      IFNULL( count( RES.worker_mb_id ), 0) as worker_cnt
+    from work_place_coop WPC
+    left join (
+      select
+        WPW.wp_id,
+        WPW.worker_mb_id,
+        WPW.coop_mb_id
+      from work_place_worker WPW
+      inner join safety_hook_state SHS ON WPW.worker_mb_id = SHS.mb_id
+      left join worker_device_status WDS on WDS.mb_id = WPW.worker_mb_id
+      where WPW.wp_id = #{wpId}
+      AND WPW.wpw_out = 0
+      AND SHS.update_date >= DATE(NOW())
+      <if test="eventType != null and state != null ">
+        <choose>
+          <when test="eventType == 1">
+            AND SHS.pairing_status = #{state}
+          </when>
+          <when test="eventType == 2">
+            AND SHS.pairing_status = 1
+            AND SHS.district_enter_status = #{state}
+          </when>
+          <when test="eventType == 3">
+            AND SHS.pairing_status = 1
+            AND SHS.district_enter_status = 1
+            AND SHS.lock_status = #{state}
+          </when>
+        </choose>
+      </if>
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+    ) RES ON RES.wp_id = WPC.wp_id AND RES.coop_mb_id = WPC.coop_mb_id
+    where WPC.wp_id = #{wpId}
+    group by WPC.coop_mb_id
+    order by coop_mb_name
+  </select>
+  <!--
+      현장 출건 조건 제외. 차후 고려
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.SensorLogInoutDao.AndAttendanceWorker">
+    <property name="aliasWorkplaceWorker" value="WPW"/>
+  </include>
+  -->
+  
+  
+  <!-- IMOS 안전고리 컴포넌트 근로자 리스트 -->
+  <select id="findCurrentWorkers"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosSafetyHookWorkerVo">
+    select
+      WPW.worker_mb_id as mb_id,
+      G5M.mb_name,
+      IFNULL(WPW.work_section_b, '') as work_section_b,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPW.work_section_b ), '' ) AS work_section_name_b,
+      SHS.pairing_status,
+      SHS.pairing_date,
+      SHS.district_enter_status,
+      SHS.district_enter_date,
+      SHS.lock_status,
+      SHS.lock_date
+    from work_place_worker WPW
+    inner join safety_hook_state SHS ON WPW.worker_mb_id = SHS.mb_id
+    inner join work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    inner join g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    left join worker_device_status WDS on WDS.mb_id = WPW.worker_mb_id
+    where WPW.wp_id = #{wpId}
+    AND WPC.coop_mb_id = #{coopMbId}
+    AND WPW.wpw_out = 0
+    AND SHS.update_date >= DATE(NOW())
+    <if test="eventType != null and state != null ">
+      <choose>
+        <when test="eventType == 1">
+          AND SHS.pairing_status = #{state}
+        </when>
+        <when test="eventType == 2">
+          AND SHS.pairing_status = 1
+          AND SHS.district_enter_status = #{state}
+        </when>
+        <when test="eventType == 3">
+          AND SHS.pairing_status = 1
+          AND SHS.district_enter_status = 1
+          AND SHS.lock_status = #{state}
+        </when>
+      </choose>
+    </if>
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+      <property name="aliasDeviceStatus" value="WDS"/>
+    </include>
+    order by G5M.mb_name
+  </select>
+  <!--
+      현장 출건 조건 제외. 차후 고려
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.SensorLogInoutDao.AndAttendanceWorker">
+      <property name="aliasWorkplaceWorker" value="WPW"/>
+    </include>
+  -->
+  
+  <!-- IMOS 안전고리 컴포넌트 현재 현황 -->
+  <select id="countTodaySafeyHookByWpId"
+    resultType="long">
+    select
+      count(*)
+    from safety_hook_state SHS
+    inner join work_place WP ON WP.wp_id = SHS.wp_id
+    where SHS.wp_id = #{wpId}
+    AND SHS.update_date >= DATE(NOW())
+  </select>
+  
+  
+</mapper>
+

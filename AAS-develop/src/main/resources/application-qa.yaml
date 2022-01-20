@@ -1,0 +1,106 @@
+spring:
+  profiles:
+    active: qa
+    include: file-logging
+  jpa:
+    hibernate:
+      ddl-auto: none
+  datasource:
+    jpa:
+      platform: mysql
+      sql-script-encoding: UTF-8
+      driverClassName: org.mariadb.jdbc.Driver
+      jdbc-url: jdbc:mariadb://kunsulup.sldb.iwinv.net:3306/kunsulup?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false&sessionVariables=sql_mode=''
+      url: jdbc:mariadb://kunsulup.sldb.iwinv.net:3306/kunsulup?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false&sessionVariables=sql_mode=''
+      username: kunsulup
+      password: kunsulup.123
+      initialSize: 5
+      maxActive: 5
+      maxIdle: 5
+      minIdle: 5
+      maxWait: 3000
+      validationQuery: SELECT 1
+      validationQueryTimeout: 2
+      testWhileIdle: true
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 600000
+      removeAbandoned: false
+      removeAbandonedTimeout: 60
+      logAbandoned: false
+      testOnBorrow: false
+      testOnReturn: true
+    mybatis:
+      platform: mysql
+      sql-script-encoding: UTF-8
+      driverClassName: org.mariadb.jdbc.Driver
+      jdbc-url: jdbc:mariadb://kunsulup.sldb.iwinv.net:3306/kunsulup?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false&sessionVariables=sql_mode=''
+      url: jdbc:mariadb://kunsulup.sldb.iwinv.net:3306/kunsulup?useUnicode=true&characterEncoding=utf8&tinyInt1isBit=false&sessionVariables=sql_mode=''
+      username: kunsulup
+      password: kunsulup.123
+      initialSize: 5
+      maxActive: 5
+      maxIdle: 5
+      minIdle: 5
+      maxWait: 3000
+      validationQuery: SELECT 1
+      validationQueryTimeout: 2
+      testWhileIdle: true
+      timeBetweenEvictionRunsMillis: 60000
+      minEvictableIdleTimeMillis: 600000
+      removeAbandoned: false
+      removeAbandonedTimeout: 60
+      logAbandoned: false
+      testOnBorrow: false
+      testOnReturn: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+swagger:
+  name: (QA) API Server Project
+
+file:
+  repository:
+    download: https://kun.hulandev.co.kr/static/
+    path: /home/huser/static/
+
+client:
+  http:
+    support: true
+    maxPool: 10
+    routeMaxPool: 6
+    timeout: 5000
+    pushRequestUrl: http://api.hulandev.co.kr/has/fcm/push.php
+    gpsRequestUrl: http://api.hulandev.co.kr/sgs/admin/gps_info.php
+    commonMonitorRequestUrl : http://api.hulandev.co.kr/sgs/admin/gps_info
+
+
+workplace:
+  infos:
+    - wpId: 70d532fe1e9d430ea0170702abfabcee
+      memo: |
+        CCTV 주소: http://112.169.188.181 (사용자이름: admin 비밀번호: 1234abc**)
+        자동계측기 주소: http://103.60.126.93:3000/login  (사용자이름: admin2 비밀번호: 1234abc**)
+    - wpId: 9a7aa734d4b7467598b80c820d6b695f
+      memo: This is Test memo
+
+otp:
+  support: false
+  defaultOtp: 1111
+
+sms:
+  support: false
+  callback: '0327198962'
+
+## KAFKA 설정
+kafka:
+  servers: 49.247.22.110:9092
+  account: aas
+  password: hulan0628*
+  adminAccount: hulan
+  adminPassword: lan0628
+
+eis:
+  config:
+    url: https://kun.hulandev.co.kr/eis

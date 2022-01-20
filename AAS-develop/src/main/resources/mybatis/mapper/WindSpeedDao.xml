@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WindSpeedDao">
+  
+  <resultMap id="windGaugeResultMap" type="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindGaugeStatusVo" autoMapping="true">
+    <id property="idx" column="idx"/>
+    <association property="recent"
+      javaType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindSpeedRecentVo"
+      notNullColumn="mac_address"
+      columnPrefix="recent_"
+      autoMapping="true"
+    />
+    <association property="threshold"
+      javaType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindGaugeSectionThresholdVo"
+      columnPrefix="threshold_"
+      autoMapping="true"
+    />
+    <collection property="history"
+      ofType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindSpeedFigureVo"
+      column="idx"
+      select="findWindSpeedRecentHistory"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  <sql id="windSpeedRecentColumns">
+    ${alias}.mac_address as ${alias_column}mac_address
+    ,${alias}.measure_time as ${alias_column}measure_time
+    ,${alias}.display_name as ${alias_column}display_name
+    ,cast( ${alias}.recently_avg as decimal(5,2)) as ${alias_column}speed_avg
+    ,cast( ${alias}.recently_max as decimal(5,2)) as ${alias_column}speed_max
+    ,${alias}.dashboard_popup as ${alias_column}dashboard_popup
+  </sql>
+  
+  <sql id="windSpeedFigureColumns">
+     ${alias}.mac_address as ${alias_column}mac_address
+     ,${alias}.measure_time as ${alias_column}measure_time
+     ,${alias}.display_name as ${alias_column}display_name
+     ,cast( ${alias}.speed_avg as decimal(5,2)) as ${alias_column}speed_avg
+     ,cast( ${alias}.speed_max as decimal(5,2)) as ${alias_column}speed_max
+  </sql>
+  
+  
+  <!-- IMOS 현장 풍속계 상태 리스트 -->
+  <select id="findWindGaugeStatusList"
+    resultMap="windGaugeResultMap">
+    SELECT
+      WDI.idx
+      ,WDI.wp_id
+      ,WDI.device_type
+      ,WDI.device_id as display_name
+      ,WDI.mac_address
+      ,WP.wp_name
+      ,WSRP.policy_no as threshold_policy_no
+      ,WDI.idx as recent_idx
+      ,<include refid="windSpeedRecentColumns"><property name="alias" value="WSR"/><property name="alias_column" value="recent_"/></include>
+      ,( select min(WSRG.speed_avg_more_than)
+         from wind_speed_range WSRG
+         where WSRG.policy_no = WSRP.policy_no
+         and WSRG.alert = 1
+         and WSRG.range_type = 2
+      ) as threshold_caution_speed
+      ,( select min(WSRG.speed_avg_more_than)
+        from wind_speed_range WSRG
+        where WSRG.policy_no = WSRP.policy_no
+        and WSRG.alert = 1
+        and WSRG.range_type = 3
+      ) as threshold_stop_speed
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    LEFT join  wind_speed_range_policy WSRP ON WP.wind_speed_policy_no = WSRP.policy_no
+    LEFT JOIN wind_speed_recent WSR ON WSR.mac_address = WDI.mac_address
+    WHERE WDI.wp_id = #{wpId}
+    AND WDI.device_type = 8
+    ORDER BY WDI.update_datetime DESC
+  </select>
+  
+  <!-- IMOS 현장 풍속계 메인 내 풍속계 리스트 -->
+  <select id="findWindGaugeList"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindSpeedRecentVo">
+    SELECT
+      WDI.idx
+      ,WDI.wp_id
+      ,WDI.device_type
+      ,WDI.device_id as display_name
+      ,WDI.mac_address as device_mac_address
+      ,WP.wp_name
+      ,<include refid="windSpeedRecentColumns"><property name="alias" value="WSR"/><property name="alias_column" value=""/></include>
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    LEFT JOIN wind_speed_recent WSR ON WSR.mac_address = WDI.mac_address
+    WHERE WDI.wp_id = #{wpId}
+    AND WDI.device_type = 8
+    ORDER BY WDI.update_datetime DESC
+  </select>
+  
+  
+  <select id="findWindGaugeStatus"
+    resultMap="windGaugeResultMap">
+    SELECT
+      WDI.idx
+      ,WDI.wp_id
+      ,WDI.device_type
+      ,WDI.device_id as display_name
+      ,WDI.mac_address
+      ,WP.wp_name
+      ,WSRP.policy_no as threshold_policy_no
+      ,<include refid="windSpeedRecentColumns"><property name="alias" value="WSR"/><property name="alias_column" value="recent_"/></include>
+      ,(
+        select min(WSRG.speed_avg_more_than)
+        from wind_speed_range WSRG
+        where WSRG.policy_no = WSRP.policy_no
+        and WSRG.alert = 1
+        and WSRG.range_type = 2
+      ) as threshold_caution_speed
+      ,(
+        select min(WSRG.speed_avg_more_than)
+        from wind_speed_range WSRG
+        where WSRG.policy_no = WSRP.policy_no
+        and WSRG.alert = 1
+        and WSRG.range_type = 3
+      ) as threshold_stop_speed
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    LEFT join  wind_speed_range_policy WSRP ON WP.wind_speed_policy_no = WSRP.policy_no
+    LEFT JOIN wind_speed_recent WSR ON WSR.mac_address = WDI.mac_address
+    WHERE WDI.idx = #{idx}
+    AND WDI.device_type = 8
+  </select>
+  
+  <!-- IMOS 현장 풍속계 풍속이력 리스트 -->
+  <select id="findWindSpeedRecentHistory"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindSpeedFigureVo">
+    SELECT
+      <include refid="windSpeedFigureColumns"><property name="alias" value="WSL"/><property name="alias_column" value=""/></include>
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    INNER JOIN wind_speed_log WSL ON WSL.mac_address = WDI.mac_address
+    WHERE WDI.idx = #{idx}
+    AND WDI.device_type = 8
+    AND WSL.measure_time >= DATE_SUB( NOW(), interval 3 hour )
+    ORDER BY WSL.measure_time
+  </select>
+  
+  
+  <!-- IMOS 현장 풍속계 풍속이력 리스트 -->
+  <select id="findWindSpeedHistoryList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindSpeedFigureVo">
+    SELECT
+      WDI.idx
+      ,<include refid="windSpeedFigureColumns"><property name="alias" value="WSL"/><property name="alias_column" value=""/></include>
+    FROM work_device_info WDI
+    INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+    INNER JOIN wind_speed_log WSL ON WSL.mac_address = WDI.mac_address
+    WHERE WDI.device_type = 8
+    <if test='idx != null'>
+      AND WDI.idx = #{idx}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <choose>
+      <when test='startDate != null'>
+        AND WSL.measure_time >= DATE( #{startDate} )
+      </when>
+      <otherwise>
+        AND WSL.measure_time >= DATE_SUB( NOW(), interval 7 day )
+      </otherwise>
+    </choose>
+    <choose>
+      <when test='endDate != null'>
+        AND WSL.measure_time <![CDATA[ < ]]> DATE( DATE_ADD( #{endDate}, interval 1 day ) )
+      </when>
+      <otherwise>
+        AND WSL.measure_time <![CDATA[ < ]]> NOW()
+      </otherwise>
+    </choose>
+    ORDER BY WSL.measure_time
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- IMOS 현장 풍속계 풍속 구간 임계치 정보 -->
+  <select id="findWindSpeedRangeListByWpId"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.windgauge.WindSpeedRangeVo">
+    SELECT
+      WSR.idx
+      ,WSR.policy_no
+      ,WSR.display_name
+      ,WSR.range_type
+      ,WSR.speed_avg_more_than
+      ,WSR.speed_avg_less_than
+      ,WSR.speed_max_more_than
+      ,WSR.speed_max_less_than
+      ,WSR.alert
+      ,WSR.status_message
+    FROM work_place WP
+    INNER JOIN wind_speed_range_policy WSRP ON WP.wind_speed_policy_no = WSRP.policy_no
+    INNER JOIN wind_speed_range WSR ON WSRP.policy_no = WSR.policy_no
+    WHERE WP.wp_id = #{wpId}
+    ORDER BY WSR.speed_max_more_than desc
+  </select>
+  
+</mapper>

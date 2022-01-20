@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <entry key="BaseCode.SUCCESS">SUCCESS</entry>
+    <entry key="BaseCode.ERR_ETC_EXCEPTION">ERR_ETC_EXCEPTION</entry>
+    <entry key="BaseCode.ERR_ARG_IS_WRONG">ERR_ARG_IS_WRONG</entry>
+    <entry key="BaseCode.ERR_SQL_EXCEPTION">ERR_SQL_EXCEPTION</entry>
+    <entry key="BaseCode.ERR_API_EXCEPTION">ERR_API_EXCEPTION</entry>
+    <entry key="BaseCode.ERR_DETAIL_EXCEPTION">ERR_DETAIL_EXCEPTION</entry>
+</properties>

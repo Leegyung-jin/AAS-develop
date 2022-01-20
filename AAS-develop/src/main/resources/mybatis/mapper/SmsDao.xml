@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SmsDao">
+  
+  <insert id="sendSms" parameterType="kr.co.hulan.aas.mvc.model.dto.SmsDto">
+    INSERT INTO MSG_QUEUE (
+    MSG_TYPE,
+    DSTADDR,
+    CALLBACK,
+    STAT,
+    SUBJECT,
+    TEXT,
+    INSERT_TIME,
+    REQUEST_TIME
+    )
+    VALUES  (
+    '1',
+    #{dstAddr},
+    #{callback},
+    '0',
+    #{subject},
+    #{content},
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+    );
+    <selectKey keyProperty="mseq" resultType="java.lang.Integer" order="AFTER">
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+  </insert>
+
+</mapper>

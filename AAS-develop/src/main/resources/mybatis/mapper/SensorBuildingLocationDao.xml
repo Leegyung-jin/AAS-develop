@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorBuildingLocationDao">
+
+  <!-- 빌딩 층별 센서 위치 정보 -->
+  <select id="findListByFloor"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.model.dto.SensorBuildingLocationDto">
+    SELECT
+      SBL.si_idx
+      ,SBL.building_no
+      ,SBL.floor
+      ,SBL.grid_x
+      ,SBL.grid_y
+      ,SBL.create_date
+      ,SBL.creator
+      ,SBL.update_date
+      ,SBL.updater
+      ,SI.si_code
+      ,SI.si_type
+      ,SI.si_place1
+      ,SI.si_place2
+      ,BD.building_name
+      ,BD.wp_id
+      ,BDF.floor_name
+      ,WP.wp_name
+      ,WP.cc_name
+      ,SD.sd_name
+      ,SD.default_color
+      ,SD.flash_color
+    FROM sensor_building_location SBL
+    INNER JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    WHERE 'x' = 'x'
+    <if test='buildingNo != null '>
+      AND SBL.building_no = #{buildingNo}
+    </if>
+    <if test='floor != null  '>
+      AND SBL.floor = #{floor}
+    </if>
+    ORDER BY SBL.grid_x ASC, SBL.grid_y ASC
+  </select>
+
+  <!-- -->
+  <select id="findListByCondition"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.model.dto.SensorBuildingLocationDto">
+    SELECT
+      SBL.si_idx
+      ,SBL.building_no
+      ,SBL.floor
+      ,SBL.grid_x
+      ,SBL.grid_y
+      ,SBL.create_date
+      ,SBL.creator
+      ,SBL.update_date
+      ,SBL.updater
+      ,SI.si_code
+      ,SI.si_type
+      ,SI.si_place1
+      ,SI.si_place2
+      ,BD.building_name
+      ,BD.wp_id
+      ,BDF.floor_name
+      ,WP.wp_name
+      ,WP.cc_name
+      ,SD.sd_name
+    FROM sensor_building_location SBL
+    INNER JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        BD.building_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.si_code like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.sd_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.si_place1 like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.si_place2 like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='buildingNo != null '>
+      AND SBL.building_no = #{buildingNo}
+    </if>
+    <if test='floor != null  '>
+      AND SBL.floor = #{floor}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND WP.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <if test='siType != null and siType != "" '>
+      AND SI.si_type = #{siType}
+    </if>
+    <if test='siCode != null and siCode != "" '>
+      AND SI.si_code like concat( '%', #{siCode} ,'%')
+    </if>
+    <if test='sdName != null and sdName != "" '>
+      AND SI.sd_name like concat( '%', #{sdName} ,'%')
+    </if>
+    <if test='siPlace1 != null and siPlace1 != "" '>
+      AND SI.si_place1 like concat( '%', #{siPlace1} ,'%')
+    </if>
+    <if test='siPlace2 != null and siPlace2 != "" '>
+      AND SI.si_place2 like concat( '%', #{siPlace2} ,'%')
+    </if>
+    ORDER BY SBL.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 현장별 GPS 정책  -->
+  <select id="findListCountByCondition"
+          parameterType="map"
+          resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM sensor_building_location SBL
+    INNER JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        BD.building_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.si_code like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.sd_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.si_place1 like concat( '%', #{COMPLEX} ,'%')
+        OR
+        SI.si_place2 like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='buildingNo != null '>
+      AND SBL.building_no = #{buildingNo}
+    </if>
+    <if test='floor != null  '>
+      AND SBL.floor = #{floor}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND WP.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <if test='siType != null and siType != "" '>
+      AND SI.si_type = #{siType}
+    </if>
+    <if test='siCode != null and siCode != "" '>
+      AND SI.si_code like concat( '%', #{siCode} ,'%')
+    </if>
+    <if test='sdName != null and sdName != "" '>
+      AND SI.sd_name like concat( '%', #{sdName} ,'%')
+    </if>
+    <if test='siPlace1 != null and siPlace1 != "" '>
+      AND SI.si_place1 like concat( '%', #{siPlace1} ,'%')
+    </if>
+    <if test='siPlace2 != null and siPlace2 != "" '>
+      AND SI.si_place2 like concat( '%', #{siPlace2} ,'%')
+    </if>
+  </select>
+
+
+
+
+
+  <!-- -->
+  <select id="findSituationListByCondition"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.api.building.dto.SensorBuildingSituationDto">
+    select
+      BDF.building_no
+      ,BDF.floor
+      ,BDF.floor_name
+      ,CC.cc_id
+      ,CC.cc_name
+      ,WP.wp_id
+      ,WP.wp_name
+      ,BD.building_name
+      ,IFNULL((
+        SELECT COUNT(*)
+        FROM sensor_building_location SBL
+        WHERE SBL.building_no = BDF.building_no
+        AND SBL.floor = BDF.floor
+      ), 0) AS sensor_cnt
+    from building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    INNER JOIN con_company CC ON WP.cc_id = CC.cc_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        BD.building_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='buildingNo != null '>
+      AND BDF.building_no = #{buildingNo}
+    </if>
+    <if test='floor != null  '>
+      AND BDF.floor = #{floor}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND CC.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    order by BDF.building_no, BDF.floor DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 현장별 GPS 정책  -->
+  <select id="findSituationListCountByCondition"
+          parameterType="map"
+          resultType="long">
+    SELECT
+    count(*) AS CNT
+    from building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    INNER JOIN con_company CC ON WP.cc_id = CC.cc_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        BD.building_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND CC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='buildingNo != null '>
+      AND BDF.building_no = #{buildingNo}
+    </if>
+    <if test='floor != null  '>
+      AND BDF.floor = #{floor}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND CC.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+  </select>
+
+  <select id="findById"
+          parameterType="int"
+          resultType="kr.co.hulan.aas.mvc.model.dto.SensorBuildingLocationDto">
+    SELECT
+      SBL.si_idx
+      ,SBL.building_no
+      ,SBL.floor
+      ,SBL.grid_x
+      ,SBL.grid_y
+      ,SBL.create_date
+      ,SBL.creator
+      ,SBL.update_date
+      ,SBL.updater
+      ,SI.si_code
+      ,SI.si_type
+      ,SI.si_place1
+      ,SI.si_place2
+      ,BD.building_name
+      ,BD.wp_id
+      ,BDF.floor_name
+      ,WP.wp_name
+      ,WP.cc_name
+      ,SD.sd_name
+    FROM sensor_building_location SBL
+    INNER JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    WHERE SBL.si_idx = #{siIdx}
+  </select>
+
+</mapper>
+
+

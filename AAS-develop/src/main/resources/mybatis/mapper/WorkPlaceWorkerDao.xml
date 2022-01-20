@@ -1,0 +1,1379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWorkerDao">
+  
+  <!-- 현장 관리 > 근로자편입 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceWorkerDto">
+    SELECT
+      WPW.wpw_id
+      ,WP.wp_id
+      ,WP.wp_name
+      ,WPW.wpc_id
+      ,WPW.coop_mb_id
+      ,( SELECT mb_name FROM g5_member G5COOP WHERE G5COOP.mb_id = WPW.coop_mb_id ) as coop_mb_name
+      ,WPW.worker_mb_id
+      ,G5M.mb_name as worker_mb_name
+      ,WPC.work_section_a
+      ,IFNULL(( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work) AS work_section_name_a
+      ,WPW.work_section_b
+      ,WS.section_name AS work_section_name_b
+      ,WPW.wpw_out
+      ,WPW.wpw_out_memo
+      ,WPW.wpw_bp
+      ,WPW.wpw_oper
+      ,WPW.wpw_dis1
+      ,WPW.wpw_dis2
+      ,WPW.wpw_dis3
+      ,WPW.wpw_dis4
+      ,WPW.wpw_show
+      ,WPW.wpw_status
+      ,WPW.wpw_datetime
+      ,WPC.cc_id
+      ,( select CC.cc_name from con_company CC WHERE CC.cc_id = WPC.cc_id ) as cc_name
+      ,G5M.mb_birth AS birthday
+      ,G5M.mb_addr1
+      ,G5M.mb_addr2
+      ,G5M.mb_5 AS bloodType
+    FROM work_place_worker WPW
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id AND G5M.mb_level = 2
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    <choose>
+      <when test='coopMbId != null and coopMbId != "" '>
+        INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+      </when>
+      <otherwise>
+        LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+      </otherwise>
+    </choose>
+    LEFT JOIN work_section WS ON WS.section_cd = WPW.work_section_b
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WS.section_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+    </if>
+    <if test='workerMbName != null and workerMbName != "" '>
+      AND G5M.mb_name like concat( '%', #{workerMbName} ,'%')
+    </if>
+    <if test='wpcWork != null and wpcWork != "" '>
+      AND WS.section_name like concat( '%', #{wpcWork} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND WPC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+    ORDER BY WPW.wpw_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 현장 관리 > 근로자편입 -->
+  <select id="findListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM work_place_worker WPW
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id AND G5M.mb_level = 2
+    INNER JOIN work_place WP ON WP.wp_id = WPW.wp_id
+    <choose>
+      <when test='coopMbId != null and coopMbId != "" '>
+        INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+      </when>
+      <otherwise>
+        LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+      </otherwise>
+    </choose>
+    LEFT JOIN work_section WS ON WS.section_cd = WPW.work_section_b
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WS.section_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='mbId != null and mbId != "" '>
+      AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+    </if>
+    <if test='workerMbName != null and workerMbName != "" '>
+      AND G5M.mb_name like concat( '%', #{workerMbName} ,'%')
+    </if>
+    <if test='wpcWork != null and wpcWork != "" '>
+      AND WS.section_name like concat( '%', #{wpcWork} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND WPC.cc_id = #{ccId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+  </select>
+  
+  <!-- 출력일보 > 출근자 리스트 -->
+  <select id="findAttendantListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceWorkerDto">
+    SELECT
+      WPW.wp_id
+      ,WP.wp_name
+      ,WPW.coop_mb_id
+      ,G5MCOOP.mb_name as coop_mb_name
+      ,WPW.worker_mb_id
+      ,G5M.mb_name AS worker_mb_name
+      ,CC.cc_id
+      ,CC.cc_name
+    FROM work_place_worker WPW
+    INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    INNER JOIN attendance_book ATDB ON ATDB.wp_id = WPW.wp_id AND ATDB.coop_mb_id = WPW.coop_mb_id AND ATDB.mb_id = WPW.worker_mb_id
+                                   AND ATDB.working_day = DATE_FORMAT( #{wwpDate}, '%Y%m%d')
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPW.coop_mb_id
+    WHERE WPW.wp_id = #{wpId}
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+    ORDER BY WPW.worker_mb_name DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="findAttendantListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM work_place_worker WPW
+    INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    INNER JOIN attendance_book ATDB ON ATDB.wp_id = WPW.wp_id AND ATDB.coop_mb_id = WPW.coop_mb_id AND ATDB.mb_id = WPW.worker_mb_id
+    AND ATDB.working_day = DATE_FORMAT( #{wwpDate}, '%Y%m%d')
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPW.coop_mb_id
+    WHERE WPW.wp_id = #{wpId}
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+  </select>
+  
+  
+  <!-- Deprecated? -->
+  <select id="findAttendantSituationListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantSituationVo">
+    SELECT
+    WPC.wp_id,
+    WPC.wp_name,
+    WPC.coop_mb_id,
+    WPC.coop_mb_name,
+    IFNULL((
+    select COUNT( DISTINCT SLI.mb_id, DATE(SLI.sli_in_datetime) )
+    from sensor_log_inout SLI
+    WHERE SLI.wp_id = WPC.wp_id
+    AND SLI.coop_mb_id = WPC.coop_mb_id
+    AND SLI.sli_in_si_type = '출입용'
+    AND SLI.sli_in_datetime between DATE( #{wwpDate} ) and STR_TO_DATE( concat( DATE_FORMAT( #{wwpDate}, '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+    ), 0) AS worker_today_count
+    FROM (
+    SELECT
+    WPC.wp_id,
+    WPC.wp_name,
+    WPC.coop_mb_id,
+    WPC.coop_mb_name
+    FROM work_place_coop WPC
+    INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    WHERE 'x' = 'x'
+    <if test='wpId != null and wpId != "" '>
+      AND WPC.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+    ORDER BY WPC.wpc_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+    ) WPC
+  </select>
+  
+  <!-- Deprecated? -->
+  <select id="findAttendantSituationListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT COUNT(*)
+    FROM work_place_coop WPC
+    INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    WHERE 'x' = 'x'
+    <if test='wpId != null and wpId != "" '>
+      AND WPC.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+  </select>
+  
+  <!-- 안전조회 미참석자 > 안전조회 현황 -->
+  <select id="findEducationAttendeeListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceWorkerDto">
+    select
+      RES.wpw_id
+      ,RES.wp_id
+      ,RES.wp_name
+      ,RES.coop_mb_id
+      ,RES.coop_mb_name
+      ,RES.worker_mb_id
+      ,RES.worker_mb_name
+      ,RES.cc_id
+      ,RES.cc_name
+      ,DATE(#{targetDate}) AS target_date
+      ,RES.education_attend_date
+      ,CASE WHEN RES.education_attend_date IS NOT NULL THEN '1' ELSE '0' END AS attend_status
+    from (
+      select
+        WPW.wpw_id
+        ,WP.wp_id
+        ,WP.wp_name
+        ,G5MCOOP.mb_id as coop_mb_id
+        ,G5MCOOP.mb_name as coop_mb_name
+        ,WPW.worker_mb_id
+        ,G5M.mb_name AS worker_mb_name
+        ,CC.cc_id
+        ,CC.cc_name
+        ,MIN( SLI.sli_in_datetime ) as education_attend_date
+      from work_place_worker WPW
+      INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id AND G5M.mb_level = 2
+      INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+      INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+      INNER JOIN con_company CC on WPC.cc_id = CC.cc_id
+      INNER JOIN g5_member G5MCOOP on G5MCOOP.mb_id = WPW.coop_mb_id
+      INNER JOIN attendance_book ATDB on ATDB.wp_id = WPW.wp_id AND ATDB.coop_mb_id = WPW.coop_mb_id AND ATDB.mb_id = WPW.worker_mb_id
+                                     AND ATDB.working_day = DATE_FORMAT(DATE(#{targetDate}), '%Y%m%d')
+      LEFT JOIN sensor_log_inout SLI ON SLI.wp_id = WPW.wp_id AND SLI.coop_mb_id = WPW.coop_mb_id AND SLI.mb_id = WPW.worker_mb_id
+                                    AND SLI.si_type = '안전조회'
+                                    AND SLI.sli_in_datetime >= DATE(#{targetDate})
+                                    AND SLI.sli_in_datetime <![CDATA[<]]>  DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+                                    AND TIME(SLI.sli_in_datetime) <![CDATA[<]]>  WP.wp_edutime_end
+                                    AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[>]]>   WP.wp_edutime_start
+      WHERE 'x' = 'x'
+      <if test='wpId != null and wpId != "" '>
+        AND WPW.wp_id = #{wpId}
+      </if>
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPW.coop_mb_id = #{coopMbId}
+      </if>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+        <property name="aliasWp" value="WP"/>
+        <property name="aliasWpAndCoop" value="WPC"/>
+      </include>
+      group by WPW.wpw_id
+      having 'x' = 'x'
+      <choose>
+        <when test='attendStatus != null and attendStatus == "1" '>
+          and education_attend_date is not null
+        </when>
+        <when test='attendStatus != null and attendStatus == "0" '>
+          and education_attend_date is null
+        </when>
+      </choose>
+    ) RES
+    ORDER BY RES.wp_id, RES.worker_mb_name DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  
+  <select id="findEducationAttendeeListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+      count(*) AS CNT
+    from (
+      select
+        WPW.wpw_id
+        ,WP.wp_id
+        ,WP.wp_name
+        ,G5MCOOP.mb_id as coop_mb_id
+        ,G5MCOOP.mb_name as coop_mb_name
+        ,WPW.worker_mb_id
+        ,G5M.mb_name AS worker_mb_name
+        ,CC.cc_id
+        ,CC.cc_name
+        ,MIN( SLI.sli_in_datetime ) as education_attend_date
+      from work_place_worker WPW
+      INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id AND G5M.mb_level = 2
+      INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+      INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+      INNER JOIN con_company CC on WPC.cc_id = CC.cc_id
+      INNER JOIN g5_member G5MCOOP on G5MCOOP.mb_id = WPW.coop_mb_id
+      INNER JOIN attendance_book ATDB on ATDB.wp_id = WPW.wp_id AND ATDB.coop_mb_id = WPW.coop_mb_id AND ATDB.mb_id = WPW.worker_mb_id
+                                    AND ATDB.working_day = DATE_FORMAT(DATE(#{targetDate}), '%Y%m%d')
+      LEFT JOIN sensor_log_inout SLI ON SLI.wp_id = WPW.wp_id AND SLI.coop_mb_id = WPW.coop_mb_id AND SLI.mb_id = WPW.worker_mb_id
+                                    AND SLI.si_type = '안전조회'
+                                    AND SLI.sli_in_datetime >= DATE(#{targetDate})
+                                    AND SLI.sli_in_datetime <![CDATA[<]]>  DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+                                    AND TIME(SLI.sli_in_datetime) <![CDATA[<]]>  WP.wp_edutime_end
+                                    AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[>]]>   WP.wp_edutime_start
+      WHERE 'x' = 'x'
+      <if test='wpId != null and wpId != "" '>
+        AND WPW.wp_id = #{wpId}
+      </if>
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPW.coop_mb_id = #{coopMbId}
+      </if>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+        <property name="aliasWp" value="WP"/>
+        <property name="aliasWpAndCoop" value="WPC"/>
+      </include>
+      group by WPW.wpw_id
+      having 'x' = 'x'
+      <choose>
+        <when test='attendStatus != null and attendStatus == "1" '>
+          and education_attend_date is not null
+        </when>
+        <when test='attendStatus != null and attendStatus == "0" '>
+          and education_attend_date is null
+        </when>
+      </choose>
+    ) RES
+  </select>
+  
+  <!--
+  <select id="findEducationAttendeeListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceWorkerDto">
+    SELECT
+      WPW.wpw_id
+      ,WPW.wp_id
+      ,WPW.wp_name
+      ,WPW.coop_mb_id
+      ,WPW.coop_mb_name
+      ,WPW.worker_mb_id
+      ,G5M.mb_name AS worker_mb_name
+      ,WP.cc_id
+      ,WP.cc_name
+      ,DATE(#{targetDate}) AS target_date
+      ,@WORKPLACE_WORKER_EDU_DATE := (
+      select MIN( SLI.sli_in_datetime )
+      from sensor_log_inout SLI
+      WHERE SLI.wp_id = WPW.wp_id
+      AND SLI.coop_mb_id = WPW.coop_mb_id
+      AND SLI.mb_id = WPW.worker_mb_id
+      AND SLI.si_type = '안전조회'
+      AND SLI.sli_in_datetime >= DATE(#{targetDate})
+      AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+      AND TIME(SLI.sli_in_datetime) <![CDATA[<]]> WP.wp_edutime_end
+      AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[ > ]]>  WP.wp_edutime_start
+      LIMIT 1
+      ) AS education_attend_date
+      ,CASE WHEN @WORKPLACE_WORKER_EDU_DATE iS NOT NULL THEN '1' ELSE '0' END AS attend_status
+    FROM work_place_worker WPW
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id AND G5M.mb_level = 2
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+    WHERE 'x' = 'x'
+    AND EXISTS(
+      select 1
+      from sensor_log_inout SLI
+      WHERE SLI.wp_id = WPW.wp_id
+      AND SLI.coop_mb_id = WPW.coop_mb_id
+      AND SLI.mb_id = WPW.worker_mb_id
+      AND SLI.si_type = '출입용'
+      AND SLI.sli_in_datetime >= DATE(#{targetDate})
+      AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+    LIMIT 1
+    )
+    <choose>
+      <when test='attendStatus != null and attendStatus == "1" '>
+        AND EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPW.wp_id
+        AND SLI.coop_mb_id = WPW.coop_mb_id
+        AND SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '안전조회'
+        AND SLI.sli_in_datetime >= DATE(#{targetDate})
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+        AND TIME(SLI.sli_in_datetime) <![CDATA[<]]> WP.wp_edutime_end
+        AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[ > ]]>  WP.wp_edutime_start
+        LIMIT 1
+        )
+      </when>
+      <when test='attendStatus != null and attendStatus == "0" '>
+        AND NOT EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPW.wp_id
+        AND SLI.coop_mb_id = WPW.coop_mb_id
+        AND SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '안전조회'
+        AND SLI.sli_in_datetime >= DATE(#{targetDate})
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+        AND TIME(SLI.sli_in_datetime) <![CDATA[<]]> WP.wp_edutime_end
+        AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[ > ]]>  WP.wp_edutime_start
+        LIMIT 1
+        )
+      </when>
+    </choose>
+    
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    ORDER BY WPW.wpw_datetime DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <select id="findEducationAttendeeListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM work_place_worker WPW
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id AND G5M.mb_level = 2
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+    WHERE 'x' = 'x'
+    AND EXISTS(
+    select 1
+    from sensor_log_inout SLI
+    WHERE SLI.wp_id = WPW.wp_id
+    AND SLI.coop_mb_id = WPW.coop_mb_id
+    AND SLI.mb_id = WPW.worker_mb_id
+    AND SLI.si_type = '출입용'
+    AND SLI.sli_in_datetime >= DATE(#{targetDate})
+    AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+    LIMIT 1
+    )
+    <choose>
+      <when test='attendStatus != null and attendStatus != "1" '>
+        AND EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPW.wp_id
+        AND SLI.coop_mb_id = WPW.coop_mb_id
+        AND SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '안전조회'
+        AND SLI.sli_in_datetime >= DATE(#{targetDate})
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+        AND TIME(SLI.sli_in_datetime) <![CDATA[<]]> WP.wp_edutime_end
+        AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[ > ]]>  WP.wp_edutime_start
+        LIMIT 1
+        )
+      </when>
+      <when test='attendStatus != null and attendStatus != "0" '>
+        AND NOT EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        WHERE SLI.wp_id = WPW.wp_id
+        AND SLI.coop_mb_id = WPW.coop_mb_id
+        AND SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '안전조회'
+        AND SLI.sli_in_datetime >= DATE(#{targetDate})
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(#{targetDate}, INTERVAL 1 DAY))
+        AND TIME(SLI.sli_in_datetime) <![CDATA[<]]> WP.wp_edutime_end
+        AND TIME(ifnull(SLI.sli_out_datetime, NOW()) ) <![CDATA[ > ]]>  WP.wp_edutime_start
+        LIMIT 1
+        )
+      </when>
+    </choose>
+    
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+  </select>
+  
+  -->
+  
+  
+  <!-- sensor 해당일별 sensor min max 차이의 합으로 근무시간 계산 -->
+  <!-- 인원 관리 > 근로자피로도 -->
+  <select id="findWorkerFatiqueListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceWorkerDto">
+    SELECT
+      DATE_FORMAT(  DATE_ADD(#{targetDate}, interval -1 day), '%Y-%m-%d') AS sli_date
+      ,CC.cc_id
+      ,CC.cc_name
+      ,WP.wp_id
+      ,WP.wp_name
+      ,WPW.wpw_id
+      ,WPW.worker_mb_id
+      ,G5M.mb_name AS worker_mb_name
+      ,WPW.coop_mb_id
+      ,WPW.coop_mb_name
+      ,TIMESTAMPDIFF(MINUTE , ATDB.work_in_date, IFNULL(ATDB.work_out_date, ATDB.work_in_date ) ) AS today_work_time
+      ,IFNULL((
+        SELECT SUM(TIMESTAMPDIFF(MINUTE , ATDB2.work_in_date, ATDB2.work_out_date))
+        FROM attendance_book ATDB2
+        WHERE ATDB2.wp_id = WPW.wp_id and ATDB2.mb_id = WPW.worker_mb_id and ATDB2.coop_mb_id = WPW.coop_mb_id
+        AND ATDB2.working_day = DATE_FORMAT( DATE_ADD(#{targetDate}, interval -1 day), '%Y%m%d') AND ATDB2.work_out_date is not null
+      ), 0 ) as yesterday_work_time
+      ,IFNULL((
+        SELECT SUM(TIMESTAMPDIFF(MINUTE , ATDB2.work_in_date, ATDB2.work_out_date))
+        FROM attendance_book ATDB2
+        WHERE ATDB2.wp_id = WPW.wp_id and ATDB2.mb_id = WPW.worker_mb_id and ATDB2.coop_mb_id = WPW.coop_mb_id
+        AND ATDB2.working_day between  date_format( date_sub( #{targetDate}, interval ( weekday( #{targetDate} )  ) DAY ), '%Y%m%d' )
+                                  and  date_format( date_add( #{targetDate}, interval ( 6 - weekday( #{targetDate} )  ) DAY ), '%Y%m%d' )
+        AND ATDB2.work_out_date is not null
+      ), 0 ) as week_work_time
+    FROM work_place_worker WPW
+    INNER JOIN attendance_book ATDB ON ATDB.wp_id = WPW.wp_id and ATDB.mb_id = WPW.worker_mb_id and ATDB.coop_mb_id = WPW.coop_mb_id
+                                       AND ATDB.working_day = DATE_FORMAT( #{targetDate}, '%Y%m%d')
+    INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    where 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        WPW.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WPW.worker_mb_id like concat( '%', #{COMPLEX} ,'%')
+        OR
+        G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='workerMbId != null and workerMbId != "" '>
+      AND WPW.worker_mb_id like concat( '%', #{workerMbId} ,'%')
+    </if>
+    <if test='workerMbName != null and workerMbName != "" '>
+      AND G5M.mb_name like concat( '%', #{workerMbName} ,'%')
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND WPW.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND WPC.cc_id = #{ccId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+    order by WP.wp_datetime desc, WPW.worker_mb_name desc
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 인원 관리 > 근로자피로도 -->
+  <!--
+  <select id="findWorkerFatiqueListCountByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    IFNULL( COUNT(WPW.wpw_id), 0) AS CNT
+    FROM work_place_worker WPW
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    where 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      WPW.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WPW.worker_mb_id like concat( '%', #{COMPLEX} ,'%')
+      OR
+      G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    AND EXISTS(
+    SELECT 'x'
+    FROM sensor_log_inout SLI
+    WHERE SLI.wp_id = WPW.wp_id
+    AND SLI.coop_mb_id = WPW.coop_mb_id
+    AND SLI.mb_id = WPW.worker_mb_id
+    AND SLI.si_type = '출입용'
+    and SLI.sli_in_datetime between DATE( #{targetDate} ) and STR_TO_DATE( concat( DATE_FORMAT( #{targetDate}, '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+    LIMIT 1
+    )
+    <if test='workerMbId != null and workerMbId != "" '>
+      AND WPW.worker_mb_id like concat( '%', #{workerMbId} ,'%')
+    </if>
+    <if test='workerMbName != null and workerMbName != "" '>
+      AND G5M.mb_name like concat( '%', #{workerMbName} ,'%')
+    </if>
+    <if test='coopMbName != null and coopMbName != "" '>
+      AND WPW.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+    </if>
+    <if test='ccId != null and ccId != "" '>
+      AND WP.cc_id = #{ccId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+  </select>
+  -->
+  
+  <select id="findWorkerFatiqueListPerTypeCountByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.safetySituation.controller.response.ListWorkerFatiqueResponse">
+    SELECT
+      IFNULL( COUNT(WPW.wpw_id), 0) AS total_count,
+      SUM( CASE WHEN WPW.WORK_TIME IS NULL OR WPW.WORK_TIME  <![CDATA[ < ]]> 540 THEN 1 ELSE 0 END ) AS normal_count,
+      SUM( CASE WHEN WPW.WORK_TIME  between 540 and 599 THEN 1 ELSE 0 END ) AS good_count,
+      SUM( CASE WHEN WPW.WORK_TIME  between 600 and 719 THEN 1 ELSE 0 END ) AS danger_count,
+      SUM( CASE WHEN WPW.WORK_TIME  <![CDATA[ >= ]]>  720 THEN 1 ELSE 0 END ) AS need_relax_count
+    FROM (
+      SELECT
+        WPW.wpw_id
+        ,IFNULL((
+          SELECT SUM(TIMESTAMPDIFF(MINUTE , ATDB2.work_in_date, ATDB2.work_out_date))
+          FROM attendance_book ATDB2
+          WHERE ATDB2.wp_id = WPW.wp_id and ATDB2.mb_id = WPW.worker_mb_id and ATDB2.coop_mb_id = WPW.coop_mb_id
+          AND ATDB2.working_day = DATE_FORMAT( DATE_ADD(#{targetDate}, interval -1 day), '%Y%m%d') AND ATDB2.work_out_date is not null
+        ), 0 ) as WORK_TIME
+      FROM work_place_worker WPW
+      INNER JOIN attendance_book ATDB ON ATDB.wp_id = WPW.wp_id and ATDB.mb_id = WPW.worker_mb_id and ATDB.coop_mb_id = WPW.coop_mb_id
+                                     AND ATDB.working_day = DATE_FORMAT( #{targetDate}, '%Y%m%d')
+      INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+      INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+      INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+      INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+      where 'x' = 'x'
+      <if test='COMPLEX != null and COMPLEX != "" '>
+        AND (
+          WPW.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+          OR
+          WPW.worker_mb_id like concat( '%', #{COMPLEX} ,'%')
+          OR
+          G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+        )
+      </if>
+      <if test='workerMbId != null and workerMbId != "" '>
+        AND WPW.worker_mb_id like concat( '%', #{workerMbId} ,'%')
+      </if>
+      <if test='workerMbName != null and workerMbName != "" '>
+        AND G5M.mb_name like concat( '%', #{workerMbName} ,'%')
+      </if>
+      <if test='coopMbName != null and coopMbName != "" '>
+        AND WPW.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+      </if>
+      <if test='ccId != null and ccId != "" '>
+        AND WPC.cc_id = #{ccId}
+      </if>
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPW.coop_mb_id = #{coopMbId}
+      </if>
+      <if test='wpId != null and wpId != "" '>
+        AND WP.wp_id = #{wpId}
+      </if>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+        <property name="aliasWp" value="WP"/>
+        <property name="aliasWpAndCoop" value="WPC"/>
+      </include>
+    ) WPW
+  </select>
+  
+  <!-- 현장 근로자 검색 ( Push 대상 )  -->
+  <select id="findWorkplaceWorkerForPush"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+    SELECT
+    G5M.mb_id
+    ,G5M.mb_18 AS pushNormal
+    ,G5M.mb_19 AS pushDanger
+    ,G5M.mb_20 AS deviceId
+    ,G5M.app_version
+    FROM work_place_worker WPW
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    WHERE G5M.mb_level = 2
+    AND WPW.wp_id = #{wpId}
+    AND WPW.worker_mb_id IN <foreach collection="mbIdList" item="mbId" index="index" separator="," open="(" close=")">#{mbId}</foreach>
+  </select>
+  
+  
+  
+  
+  
+  <select id="findById"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceWorkerDto">
+    SELECT
+      WPW.wpw_id
+         ,WPW.wp_id
+         ,WPW.wp_name
+         ,WPW.wpc_id
+         ,WPW.coop_mb_id
+         ,WPW.coop_mb_name
+         ,WPW.wpc_work
+         ,WPW.worker_mb_id
+         ,G5M.mb_name AS worker_mb_name
+         ,WPC.work_section_a
+         ,IFNULL(( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work) AS work_section_name_a
+         ,WPW.work_section_b
+         ,( SELECT WS.section_name from work_section WS where WS.section_cd = WPW.work_section_b ) AS work_section_name_b
+         ,WPW.wpw_out
+         ,WPW.wpw_out_memo
+         ,WPW.wpw_bp
+         ,WPW.wpw_oper
+         ,WPW.wpw_dis1
+         ,WPW.wpw_dis2
+         ,WPW.wpw_dis3
+         ,WPW.wpw_dis4
+         ,WPW.wpw_show
+         ,WPW.wpw_status
+         ,WPW.wpw_datetime
+         ,WP.cc_id
+         ,WP.cc_name
+         ,G5M.mb_birth AS birthday
+         ,G5M.mb_addr1
+         ,G5M.mb_addr2
+         ,G5M.mb_5 AS bloodType
+    FROM work_place_worker WPW
+           INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id AND G5M.mb_level = 2
+           INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+           LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    WHERE WPW.wpw_id = #{wpwId}
+  </select>
+  
+  <insert id="create" parameterType="kr.co.hulan.aas.mvc.model.dto.WorkPlaceCoopDto">
+    INSERT INTO work_place_worker (
+                                   wpw_id
+                                  ,wp_id
+                                  ,wp_name
+                                  ,wpc_id
+                                  ,coop_mb_id
+                                  ,coop_mb_name
+                                  ,wpc_work
+                                  ,work_section_b
+                                  ,worker_mb_id
+                                  ,worker_mb_name
+                                  ,wpw_out
+                                  ,wpw_out_memo
+                                  ,wpw_bp
+                                  ,wpw_oper
+                                  ,wpw_dis1
+                                  ,wpw_dis2
+                                  ,wpw_dis3
+                                  ,wpw_dis4
+                                  ,wpw_show
+                                  ,wpw_status
+                                  ,wpw_datetime
+    )
+    VALUES (
+             #{wpwId}
+           , #{wpId}
+           , #{wpName}
+           , #{wpcId}
+           , #{coopMbId}
+           , #{coopMbName}
+           , #{wpcWork}
+           , #{workSectionB,jdbcType=VARCHAR}
+           , #{workerMbId}
+           , #{workerMbName}
+           , #{wpwOut}
+           , #{wpwOutMemo}
+           , #{wpwBp}
+           , #{wpwOper}
+           , #{wpwDis1}
+           , #{wpwDis2}
+           , #{wpwDis3}
+           , #{wpwDis4}
+           , 1
+           , 1
+           , NOW()
+           );
+  </insert>
+  
+  <update id="updateWorkerMbName" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+    UPDATE work_place_worker
+    SET
+      worker_mb_name = #{name}
+    where worker_mb_id = #{mbId}
+  </update>
+  
+  
+  <select id="findCommuteTypeSummary"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.CommuteTypeSummary">
+    select
+      total_worker_count,
+      qr_enter_count,
+      0 as tracker_enter_count,
+      ( total_worker_count - qr_enter_count ) as app_enter_count
+    from (
+           select
+             IFNULL( count(distinct WPW.worker_mb_id), 0) as total_worker_count,
+             IFNULL( count(distinct WQE.mb_id), 0) AS qr_enter_count
+           FROM work_place_worker WPW
+                  INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+                  LEFT JOIN worker_qr_enter WQE ON WQE.wp_id = WPW.wp_id
+             and WQE.coop_mb_id = WPW.coop_mb_id
+             AND WQE.mb_id = WPW.worker_mb_id
+             AND WQE.enter_day = DATE(NOW())
+           where WPW.wpw_out = 0
+             AND WPW.wp_id = #{wpId}
+             AND EXISTS(
+             select 1
+             from sensor_log_inout SLI
+             where SLI.wp_id = WPW.wp_id
+               and SLI.mb_id = WPW.worker_mb_id
+               AND SLI.si_type = '출입용'
+               AND SLI.sli_in_datetime >= DATE(NOW())
+               AND SLI.sli_in_datetime <![CDATA[ < ]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+             LIMIT 1
+             )
+         ) WORK_STATUS
+  </select>
+  
+  
+  <select id="findQrEnterCommuteWorker"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    select
+      WP.wp_name,
+      G5MCOOP.mb_name as coop_mb_name,
+      WPW.worker_mb_id,
+      G5M.mb_name as worker_mb_name,
+      (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+      (select section_name from work_section where section_cd = WPW.work_section_b) as work_section_name_b,
+      (
+        select MIN(WQE2.create_date) as measure_time
+        from worker_qr_enter WQE2
+        where WQE2.wp_id = WPW.wp_id
+          AND WQE2.mb_id = WPW.worker_mb_id
+          AND WQE2.enter_day = DATE(NOW())
+      ) as measure_time
+    FROM work_place_worker WPW
+           INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+           INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPW.coop_mb_id
+           INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+           LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    where WPW.wpw_out = 0
+      AND EXISTS(
+      SELECT 1
+      FROM worker_qr_enter WQE
+      WHERE WQE.wp_id = WPW.wp_id AND WQE.mb_id = WPW.worker_mb_id
+        AND WQE.enter_day = DATE(NOW())
+      LIMIT 1
+      )
+      AND EXISTS(
+      select 1
+      from sensor_log_inout SLI
+      where SLI.wp_id = WPW.wp_id
+        and SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[ < ]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+      LIMIT 1
+      )
+  </select>
+  
+  <select id="findAppEnterCommuteWorker"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    select
+      WP.wp_name,
+      G5MCOOP.mb_name as coop_mb_name,
+      WPW.worker_mb_id,
+      G5M.mb_name as worker_mb_name,
+      (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+      (select section_name from work_section where section_cd = WPW.work_section_b) as work_section_name_b,
+      (
+        select
+          MIN(sli_in_datetime)
+        from sensor_log_inout SLI
+        where SLI.wp_id = WPW.wp_id
+          AND SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+      ) as measure_time
+    FROM work_place_worker WPW
+           INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+           INNER JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPW.coop_mb_id
+           INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+           LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    where WPW.wpw_out = 0
+      AND WPW.wp_id = #{wpId}
+      AND NOT EXISTS(
+      SELECT 1
+      FROM worker_qr_enter WQE
+      WHERE WQE.wp_id = WPW.wp_id AND WQE.mb_id = WPW.worker_mb_id
+        AND WQE.enter_day = DATE(NOW())
+      LIMIT 1
+      )
+      AND EXISTS(
+      select 1
+      from sensor_log_inout SLI
+      where SLI.wp_id = WPW.wp_id
+        and SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+      LIMIT 1
+      )
+  </select>
+  
+  
+  <select id="findCurrentEntranceWorkerList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    select
+    WP.wp_name,
+    G5MCOOP.mb_name as coop_mb_name,
+    WPW.worker_mb_id,
+    G5M.mb_name as worker_mb_name,
+    (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+    (select section_name from work_section where section_cd = WPW.work_section_b) as work_section_name_b,
+    (
+    select
+    MIN(sli_in_datetime)
+    from sensor_log_inout SLI
+    where SLI.wp_id = WPW.wp_id
+    AND SLI.mb_id = WPW.worker_mb_id
+    AND SLI.si_type = '출입용'
+    AND SLI.sli_in_datetime >= DATE(NOW())
+    AND SLI.sli_in_datetime <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+    ) as measure_time
+    FROM work_place_worker WPW
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    LEFT JOIN g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    where WPW.wpw_out = 0
+    AND WPW.wp_id = #{wpId}
+    AND EXISTS(
+    select 1
+    from sensor_log_inout SLI
+    where SLI.wp_id = WPW.wp_id
+    and SLI.mb_id = WPW.worker_mb_id
+    AND SLI.si_type = '출입용'
+    AND SLI.sli_in_datetime >= DATE(NOW())
+    AND SLI.sli_in_datetime <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+    LIMIT 1
+    )
+    <if test="currentWorking != null and monitorType != null and monitorType != '' ">
+      <choose>
+        <when test='monitorType == "gps" '>
+          <choose>
+            <when test="currentWorking == 1">
+              AND EXISTS(
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+              )
+            </when>
+            <when test="currentWorking == 0">
+              AND NOT EXISTS(
+              SELECT 1
+              FROM gps_location GL
+              WHERE WPW.worker_mb_id = GL.mb_id AND WPW.wp_id = GL.wp_id
+              and GL.mb_id is not null
+              AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+              LIMIT 1
+              )
+            </when>
+          </choose>
+        </when>
+        <when test='monitorType == "ble" '>
+          <choose>
+            <when test="currentWorking == 1">
+              AND EXISTS(
+              SELECT 1
+              FROM sensor_log_recent SLR
+              INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+              LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+              WHERE SLR.mb_id = WPW.worker_mb_id AND SLR.wp_id = WPW.wp_id
+              AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+              AND SLR.in_out_type IN ( 0, 1 )
+              AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+                 <property name="aliasDeviceStatus" value="WDS"/>
+               </include>
+              LIMIT 1
+              )
+            </when>
+            <when test="currentWorking == 0">
+              AND NOT EXISTS(
+              SELECT 1
+              FROM sensor_log_recent SLR
+              INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+              LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+              WHERE SLR.mb_id = WPW.worker_mb_id AND SLR.wp_id = WPW.wp_id
+              AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+              AND SLR.in_out_type IN ( 0, 1 )
+              AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+                <property name="aliasDeviceStatus" value="WDS"/>
+              </include>
+              LIMIT 1
+              )
+            </when>
+          </choose>
+        </when>
+      </choose>
+    </if>
+  
+  </select>
+  
+  
+  <!--  ************************************************************************
+  IMOS 출역 근로자 리스트 기본 쿼리 ( 근로자 상태값 미포함 )
+  ************************************************************************  -->
+  <sql id="monitoringWorkerSql">
+    select
+      WP.wp_id,
+      WP.wp_name,
+      WPW.coop_mb_id,
+      WPW.worker_mb_id,
+      WPW.work_section_b,
+      ATBK.work_in_temperature as temperature,
+      ATBK.work_in_method as commute_type,
+      ATBK.work_in_date as measure_time
+    from work_place_worker WPW
+    inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+    inner join work_place WP ON WP.wp_id = WPW.wp_id
+    inner join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id
+                                  AND ATBK.mb_id = WPW.worker_mb_id
+                                  AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+    LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWorkerDao.monitoringWorkerWhereSql"></include>
+  </sql>
+  
+  <!--  ************************************************************************
+  IMOS 출역 근로자 리스트 기본 쿼리 ( 근로자 상태값 포함 )
+  ************************************************************************  -->
+  <sql id="monitoringWorkerWithActiveInfoSql">
+    select
+      RES.wp_id,
+      RES.wp_name,
+      RES.coop_mb_id,
+      RES.worker_mb_id,
+      RES.work_section_b,
+      RES.temperature,
+      RES.commute_type,
+      RES.measure_time,
+      case
+        when RES.monitor_type = 'gps' then
+          IFNULL((
+            SELECT
+            CASE
+            WHEN GL.measure_time IS NULL THEN 21
+            WHEN GL.measure_time <![CDATA[ < ]]> DATE_ADD(NOW(), INTERVAL -10 MINUTE) THEN 22
+            ELSE 1
+            END
+            FROM gps_location GL
+            WHERE RES.worker_mb_id = GL.mb_id AND RES.wp_id = GL.wp_id
+            LIMIT 1
+          ), 21)
+        when RES.monitor_type = 'ble' then
+          case
+            WHEN RES.upt_datetime IS NULL THEN 11
+            WHEN RES.upt_datetime <![CDATA[ < ]]> date(now()) THEN 12
+            WHEN RES.upt_datetime <![CDATA[ <= ]]> date_sub( NOW(), interval 22 minute ) THEN 13
+            WHEN RES.ble_check != 1 THEN 14
+            WHEN RES.loc_check != 1 THEN 15
+            else
+              IFNULL((
+                SELECT
+                  CASE
+                    WHEN SLR.si_idx IS NULL THEN 31
+                    WHEN SLR.slr_datetime <![CDATA[ < ]]> date(now()) THEN 32
+                    WHEN SLR.in_out_type IN ( 2, 3 ) THEN 33
+                    WHEN SBL.building_no IS NULL THEN 34
+                    ELSE 1
+                  END
+                FROM sensor_log_recent SLR
+                LEFT JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+                WHERE RES.worker_mb_id = SLR.mb_id AND RES.wp_id = SLR.wp_id
+                LIMIT 1
+              ), 31 )
+          end
+        else 0
+      end as close_reason,
+      greatest(
+       COALESCE(
+        case
+          when RES.monitor_type = 'gps' then
+            IFNULL((
+              SELECT
+              GL.measure_time
+              FROM gps_location GL
+              WHERE RES.worker_mb_id = GL.mb_id AND RES.wp_id = GL.wp_id
+              AND GL.measure_time >= DATE(NOW())
+              LIMIT 1
+            ), RES.upt_datetime)
+          when RES.monitor_type = 'ble' then
+            case
+              WHEN RES.upt_datetime IS NULL THEN null
+              WHEN RES.upt_datetime <![CDATA[ < ]]> date(now()) THEN null
+              WHEN RES.upt_datetime <![CDATA[ <= ]]> date_sub( NOW(), interval 22 minute ) THEN RES.upt_datetime
+              WHEN RES.ble_check != 1 THEN RES.upt_datetime
+              WHEN RES.loc_check != 1 THEN RES.upt_datetime
+              else
+                IFNULL((
+                  SELECT
+                  SLR.slr_datetime
+                  FROM sensor_log_recent SLR
+                  WHERE RES.worker_mb_id = SLR.mb_id AND RES.wp_id = SLR.wp_id
+                  AND SLR.slr_datetime >= DATE(NOW())
+                  LIMIT 1
+                ), RES.upt_datetime)
+            end
+          else null
+        end
+       ), RES.measure_time ) as close_time
+    from (
+      select
+        WP.wp_id,
+        WP.wp_name,
+        WPW.coop_mb_id,
+        WPW.worker_mb_id,
+        WPW.work_section_b,
+        ATBK.work_in_temperature as temperature,
+        ATBK.work_in_method as commute_type,
+        ATBK.work_in_date as measure_time,
+        case
+          <if test='monitorType != null and monitorType != "" '>
+            when #{monitorType} = 'gps' then 'gps'
+            when #{monitorType} = 'ble' then 'ble'
+          </if>
+          when WPMC.support_gps = 1 then 'gps'
+          when WPMC.support_ble = 1 then 'ble'
+          else 'no'
+        end as monitor_type,
+        WDS.upt_datetime,
+        WDS.ble_check,
+        WDS.loc_check
+      from work_place_worker WPW
+      inner join work_place_monitor_config WPMC ON WPMC.wp_id = WPW.wp_id
+      inner join work_place WP ON WP.wp_id = WPW.wp_id
+      inner join attendance_book ATBK ON ATBK.wp_id = WPW.wp_id
+                                    AND ATBK.mb_id = WPW.worker_mb_id
+                                    AND ATBK.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWorkerDao.monitoringWorkerWhereSql"></include>
+    ) RES
+  </sql>
+  
+  <!-- IMOS 출역 근로자 정보 기본 테이블 및 조건 쿼리 -->
+  <sql id="monitoringWorkerWhereSql">
+    where WP.wp_end_status = 0
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+      AND WPW.coop_mb_id = #{loginCoopMbId}
+    </if>
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    AND WPW.wpw_out = 0
+  </sql>
+  
+  <!-- IMOS 근로자 출역관리 컴포넌트 - 출역유형별 근로자수 -->
+  <select id="findCommuteTypeStatList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosCommuteTypeStatVo">
+    select
+      RES.commute_type,
+      count(RES.worker_mb_id) as worker_count
+    from (
+      <include refid="monitoringWorkerSql" />
+    ) RES
+    inner join work_place_coop WPC ON WPC.wp_id = RES.wp_id and WPC.coop_mb_id = RES.coop_mb_id
+    where 'x' = 'x'
+    <if test='loginCcId != null and loginCcId != "" '>
+      and WPC.cc_id = #{loginCcId}
+    </if>
+    group by RES.commute_type
+  </select>
+  
+  <!-- IMOS 근로자 출역관리 컴포넌트 - 실시간 작업/종료인원 현황 -->
+  <select id="findCurrentWorkStatus"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.CurrentWorkStatusSummary">
+    select
+      count(distinct RES.worker_mb_id) as total_worker_count,
+      sum( case when RES.close_reason = 1 then 1 else 0 end ) as current_worker_count
+    FROM (
+      <include refid="monitoringWorkerWithActiveInfoSql" />
+    ) RES
+    inner join work_place_coop WPC ON WPC.wp_id = RES.wp_id and WPC.coop_mb_id = RES.coop_mb_id
+    where 'x' = 'x'
+    <if test='loginCcId != null and loginCcId != "" '>
+      and WPC.cc_id = #{loginCcId}
+    </if>
+  </select>
+  
+  <!-- IMOS 근로자 출역관리 컴포넌트 - 근로자 리스트 -->
+  <select id="findMonitoringWorkerListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosWorkingWorkerVo">
+    select
+      RES.wp_name,
+      G5MCOOP.mb_name as coop_mb_name,
+      RES.worker_mb_id,
+      G5M.mb_level,
+      G5M.mb_name as worker_mb_name,
+      (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+      (select section_name from work_section where section_cd = RES.work_section_b) as work_section_name_b,
+      RES.commute_type,
+      RES.temperature,
+      RES.measure_time,
+      RES.close_reason,
+      RES.close_time
+    from (
+      <include refid="monitoringWorkerWithActiveInfoSql" />
+    ) RES
+    inner join work_place_coop WPC ON WPC.wp_id = RES.wp_id and WPC.coop_mb_id = RES.coop_mb_id
+    inner join g5_member G5M ON G5M.mb_id = RES.worker_mb_id
+    inner join g5_member G5MCOOP ON G5MCOOP.mb_id = RES.coop_mb_id
+    where 'x' = 'x'
+    <if test='commuteType != null '>
+      and RES.commute_type = #{commuteType}
+    </if>
+    <if test='currentWorking != null '>
+      and (case when RES.close_reason = 1 then 1 else 0 end) = #{currentWorking}
+    </if>
+    <if test='loginCcId != null and loginCcId != "" '>
+      and WPC.cc_id = #{loginCcId}
+    </if>
+    order by RES.measure_time
+  </select>
+  
+  <!-- IMOS 근로자 출역관리 컴포넌트 - 출근유형별 협력사 현황 -->
+  <select id="findCoopListByCommuteType"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosCoopStatVo">
+    select
+      WPC.wp_id,
+      WP.wp_name,
+      WPC.coop_mb_id,
+      G5MCOOP.mb_name as coop_mb_name,
+      (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+      IFNULL( count(RES.worker_mb_id), 0 ) as total_worker_count,
+      <choose>
+        <when test="commuteType != null ">
+          IFNULL( SUM( case when RES.commute_type = #{commuteType} then 1 else 0 end ), 0 ) as worker_count
+        </when>
+        <otherwise>
+          IFNULL( count(RES.worker_mb_id), 0 ) as worker_count
+        </otherwise>
+      </choose>
+    from work_place_coop WPC
+    left join (
+      <include refid="monitoringWorkerSql" />
+    ) RES ON WPC.wp_id = RES.wp_id and WPC.coop_mb_id = RES.coop_mb_id
+    INNER JOIN work_place WP ON WPC.wp_id = WP.wp_id
+    inner join g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    WHERE WPC.wp_id =  #{wpId}
+    AND WP.wp_end_status = 0
+    <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+      AND WPC.coop_mb_id = #{loginCoopMbId}
+    </if>
+    <if test='loginCcId != null and loginCcId != "" '>
+      and WPC.cc_id = #{loginCcId}
+    </if>
+    group by WPC.coop_mb_id
+  </select>
+  
+  <!-- IMOS 근로자 출역관리 컴포넌트 - 실시간 작업/종료인원 협력사 현황 리스트 -->
+  <select id="findCoopListByCurrentWorking"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor4_2.vo.ImosCoopStatVo">
+    select
+      WPC.wp_id,
+      WP.wp_name,
+      WPC.coop_mb_id,
+      G5MCOOP.mb_name as coop_mb_name,
+      (select section_name from work_section where section_cd = WPC.work_section_a) as work_section_name_a,
+      IFNULL( count(RES.worker_mb_id), 0 ) as total_worker_count,
+      <choose>
+        <when test="currentWorking != null ">
+          IFNULL( sum(
+          case
+            when RES.close_reason is null then 0
+            when (
+              case
+              when RES.close_reason = 1 then 1
+              else 0
+              end = #{currentWorking}
+            ) then 1
+            else 0
+          end
+          ), 0 ) as worker_count
+        </when>
+        <otherwise>
+          IFNULL( count(RES.worker_mb_id), 0 ) as worker_count
+        </otherwise>
+      </choose>
+    FROM work_place_coop WPC
+    left join (
+      <include refid="monitoringWorkerWithActiveInfoSql" />
+    ) RES ON WPC.wp_id = RES.wp_id and WPC.coop_mb_id = RES.coop_mb_id
+    inner join work_place WP ON WP.wp_id = WPC.wp_id
+    inner join g5_member G5MCOOP ON G5MCOOP.mb_id = WPC.coop_mb_id
+    where WP.wp_end_status = 0
+    AND WP.wp_id = #{wpId}
+    <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+      AND WPC.coop_mb_id = #{loginCoopMbId}
+    </if>
+    <if test='loginCcId != null and loginCcId != "" '>
+      and WPC.cc_id = #{loginCcId}
+    </if>
+    group by WPC.coop_mb_id
+  </select>
+
+</mapper>

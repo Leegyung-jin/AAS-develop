@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkEquipmentInfoDao">
+
+    <!-- 현장 디바이스 정보 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkEquipmentInfoDto">
+        SELECT
+            WEI.idx
+            ,WEI.wp_id
+            ,WEI.coop_mb_id
+            ,WEI.mb_id
+            ,WEI.equipment_type
+            ,WEI.equipment_no
+            ,WEI.device_id
+            ,WDI.mac_address
+            ,WEI.desc
+            ,WEI.rtc_url
+            ,WEI.ope_type
+            ,WEI.ope_start
+            ,WEI.ope_end
+            ,WEI.upd_datetime
+            ,WEI.updater
+            ,WP.wp_name
+            ,EC.equipment_name
+            ,G5MC.mb_name AS coop_mb_name
+            ,G5MM.mb_name
+        FROM work_equipment_info WEI
+        INNER JOIN work_place WP ON WP.wp_id = WEI.wp_id
+        LEFT JOIN work_device_info WDI ON WEI.device_id = WDI.device_id AND WEI.wp_id = WDI.wp_id
+        LEFT JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+        LEFT JOIN work_place_coop WPC ON WPC.coop_mb_id = WEI.coop_mb_id AND WPC.wp_id = WEI.wp_id
+        LEFT JOIN work_place_worker WPW ON WPW.coop_mb_id = WEI.coop_mb_id AND WPW.wp_id = WEI.wp_id AND WPW.worker_mb_id = WEI.mb_id
+        LEFT JOIN g5_member G5MM ON G5MM.mb_id = WPW.worker_mb_id AND G5MM.mb_level = 2
+        LEFT JOIN g5_member G5MC ON G5MC.mb_id = WPC.coop_mb_id AND G5MC.mb_level = 3
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WEI.device_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WEI.equipment_no like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5MM.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WEI.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND WEI.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5MM.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='deviceId != null and deviceId != "" '>
+            AND WEI.device_id like concat( '%', #{deviceId} ,'%')
+        </if>
+        <if test='equipmentNo != null and equipmentNo != "" '>
+            AND WEI.equipment_no like concat( '%', #{equipmentNo} ,'%')
+        </if>
+        <if test='equipmentType != null '>
+            AND WEI.equipment_type = #{equipmentType}
+        </if>
+        <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+            AND WEI.coop_mb_id = #{loginCoopMbId}
+        </if>
+        ORDER BY WEI.upd_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 현장별 GPS 정책  -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM work_equipment_info WEI
+        INNER JOIN work_place WP ON WP.wp_id = WEI.wp_id
+        LEFT JOIN work_device_info WDI ON WEI.device_id = WDI.device_id AND WEI.wp_id = WDI.wp_id
+        LEFT JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+        LEFT JOIN work_place_coop WPC ON WPC.coop_mb_id = WEI.coop_mb_id AND WPC.wp_id = WEI.wp_id
+        LEFT JOIN work_place_worker WPW ON WPW.coop_mb_id = WEI.coop_mb_id AND WPW.wp_id = WEI.wp_id AND WPW.worker_mb_id = WEI.mb_id
+        LEFT JOIN g5_member G5MM ON G5MM.mb_id = WPW.worker_mb_id AND G5MM.mb_level = 2
+        LEFT JOIN g5_member G5MC ON G5MC.mb_id = WPC.coop_mb_id AND G5MC.mb_level = 3
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WEI.device_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WEI.equipment_no like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5MM.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WEI.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND WEI.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5MM.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='deviceId != null and deviceId != "" '>
+            AND WEI.device_id like concat( '%', #{deviceId} ,'%')
+        </if>
+        <if test='equipmentNo != null and equipmentNo != "" '>
+            AND WEI.equipment_no like concat( '%', #{equipmentNo} ,'%')
+        </if>
+        <if test='equipmentType != null '>
+            AND WEI.equipment_type = #{equipmentType}
+        </if>
+        <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+            AND WEI.coop_mb_id = #{loginCoopMbId}
+        </if>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkEquipmentInfoDto">
+        SELECT
+            WEI.idx
+            ,WEI.wp_id
+            ,WEI.coop_mb_id
+            ,WEI.mb_id
+            ,WEI.equipment_type
+            ,WEI.equipment_no
+            ,WEI.device_id
+            ,WDI.mac_address
+            ,WEI.desc
+            ,WEI.rtc_url
+            ,WEI.ope_type
+            ,WEI.ope_start
+            ,WEI.ope_end
+            ,WEI.upd_datetime
+            ,WEI.updater
+            ,WP.wp_name
+            ,EC.equipment_name
+            ,G5MC.mb_name AS coop_mb_name
+            ,G5MM.mb_name
+        FROM work_equipment_info WEI
+        INNER JOIN work_place WP ON WP.wp_id = WEI.wp_id
+        LEFT JOIN work_device_info WDI ON WEI.device_id = WDI.device_id AND WEI.wp_id = WDI.wp_id
+        LEFT JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+        LEFT JOIN work_place_coop WPC ON WPC.coop_mb_id = WEI.coop_mb_id AND WPC.wp_id = WEI.wp_id
+        LEFT JOIN work_place_worker WPW ON WPW.coop_mb_id = WEI.coop_mb_id AND WPW.wp_id = WEI.wp_id AND WPW.worker_mb_id = WEI.mb_id
+        LEFT JOIN g5_member G5MM ON G5MM.mb_id = WPW.worker_mb_id AND G5MM.mb_level = 2
+        LEFT JOIN g5_member G5MC ON G5MC.mb_id = WPC.coop_mb_id AND G5MC.mb_level = 3
+        WHERE WEI.idx = #{idx}
+    </select>
+    
+    
+    <select id="findOpeEquipmentStatus"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.EquipmentSituationVo">
+        select
+            RES.equipment_type,
+            RES.equipment_name,
+            RES.icon_url,
+            COUNT(RES.idx) as total_count,
+            SUM( case when RES.measure_time <![CDATA[>=]]> DATE_ADD(NOW(), INTERVAL -10 MINUTE) then 1 else 0 end ) as ope_count,
+            SUM( case when RES.measure_time <![CDATA[>=]]> DATE(NOW()) then 1 else 0 end ) as today_count
+        FROM (
+            select
+                WEI.idx,
+                WEI.mb_id,
+                WEI.device_id,
+                EC.equipment_type,
+                EC.equipment_name,
+                IC.icon_url,
+                (
+                    select
+                        max(GL.measure_time)
+                    from gps_location GL
+                    where GL.wp_id = WEI.wp_id
+                    AND (
+                        (
+                            GL.mb_id is not null
+                            AND ( WEI.device_id is null or WEI.device_id = '' )
+                            AND GL.mb_id = WEI.mb_id
+                        )
+                        OR
+                        (
+                            GL.mb_id is null
+                            and GL.device_id is not null
+                            and GL.device_id = WEI.device_id
+                        )
+                    )
+                    AND GL.measure_time <![CDATA[>=]]> DATE(NOW())
+                ) as measure_time
+            from work_equipment_info WEI
+            INNER JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+            LEFT JOIN icon_code IC ON IC.icon_type = EC.icon_type
+            WHERE WEI.wp_id = #{wpId}
+            AND (
+                WEI.ope_type = 0
+                OR (
+                    WEI.ope_type = 1 AND WEI.ope_start <![CDATA[<=]]> NOW() AND WEI.ope_end <![CDATA[>=]]> NOW()
+                )
+            )
+            <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+                AND WEI.coop_mb_id = #{loginCoopMbId}
+            </if>
+        ) RES
+        group by RES.equipment_type
+    </select>
+
+    <select id="findOpeEquipmentList"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.OpeEquipmentVo">
+        select
+            CASE WHEN GL.device_id IS NOT NULL and GL.device_id != '' THEN GL.device_id ELSE GL.mb_id END as data_key
+            ,WEI.wp_id
+            ,WP.wp_name
+            ,G5MC.mb_id as coop_mb_id
+            ,G5MC.mb_name as coop_mb_name
+            ,G5MM.mb_id
+            ,G5MM.mb_name as mb_name
+            ,WEI.equipment_type
+            ,EC.equipment_name
+            ,WEI.equipment_no
+            ,WEI.ope_type
+            ,WEI.ope_start
+            ,WEI.ope_end
+        from work_equipment_info WEI
+        inner join work_place WP on WP.wp_id = WEI.wp_id
+        inner join equipment_code EC ON EC.equipment_type = WEI.equipment_type
+        inner join gps_location GL on GL.wp_id = WEI.wp_id
+        LEFT JOIN g5_member G5MM ON G5MM.mb_id = WEI.mb_id
+        LEFT JOIN g5_member G5MC ON G5MC.mb_id = WEI.coop_mb_id
+        WHERE GL.wp_id = #{wpId}
+        AND (
+            WEI.ope_type = 0
+            OR (
+                WEI.ope_type = 1 AND WEI.ope_start <![CDATA[<=]]> NOW() AND WEI.ope_end <![CDATA[>=]]> NOW()
+            )
+        )
+        <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+            AND WEI.coop_mb_id = #{loginCoopMbId}
+        </if>
+        AND WEI.equipment_type = #{equipmentType}
+        AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+        AND (
+            (
+                GL.mb_id is not null
+                AND ( WEI.device_id is null or WEI.device_id = '' )
+                AND GL.mb_id = WEI.mb_id
+            )
+            OR
+            (
+                GL.mb_id is null
+                and GL.device_id is not null
+                and GL.device_id = WEI.device_id
+            )
+        )
+    </select>
+    
+    <select id="findRegEquipmentList"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.monitor4_1.vo.OpeEquipmentVo">
+        select
+            (
+                select
+                  CASE WHEN GL.device_id IS NOT NULL and GL.device_id != '' THEN GL.device_id ELSE GL.mb_id END
+                from gps_location GL
+                where GL.wp_id = WEI.wp_id
+                AND GL.measure_time >= DATE_ADD(NOW(), INTERVAL -10 MINUTE)
+                AND (
+                    (
+                        GL.mb_id is not null
+                        AND ( WEI.device_id is null or WEI.device_id = '' )
+                        AND GL.mb_id = WEI.mb_id
+                    )
+                    OR
+                    (
+                        GL.mb_id is null
+                        and GL.device_id is not null
+                        and GL.device_id = WEI.device_id
+                    )
+                )
+            ) as data_key
+            ,WEI.wp_id
+            ,WP.wp_name
+            ,G5MC.mb_id as coop_mb_id
+            ,G5MC.mb_name as coop_mb_name
+            ,G5MM.mb_id
+            ,G5MM.mb_name as mb_name
+            ,WEI.equipment_type
+            ,EC.equipment_name
+            ,WEI.equipment_no
+            ,WEI.ope_type
+            ,WEI.ope_start
+            ,WEI.ope_end
+        from work_equipment_info WEI
+        inner join work_place WP on WP.wp_id = WEI.wp_id
+        inner join equipment_code EC ON EC.equipment_type = WEI.equipment_type
+        LEFT JOIN g5_member G5MM ON G5MM.mb_id = WEI.mb_id
+        LEFT JOIN g5_member G5MC ON G5MC.mb_id = WEI.coop_mb_id
+        WHERE WEI.wp_id = #{wpId}
+        AND (
+            WEI.ope_type = 0
+            OR (
+            WEI.ope_type = 1 AND WEI.ope_start <![CDATA[<=]]> NOW() AND WEI.ope_end <![CDATA[>=]]> NOW()
+            )
+        )
+        <if test='loginCoopMbId != null and loginCoopMbId != "" '>
+            AND WEI.coop_mb_id = #{loginCoopMbId}
+        </if>
+        <if test='equipmentType != null  '>
+            AND WEI.equipment_type = #{equipmentType}
+        </if>
+    </select>
+    
+</mapper>

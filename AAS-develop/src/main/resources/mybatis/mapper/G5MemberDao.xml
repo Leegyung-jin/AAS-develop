@@ -1,0 +1,1923 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.G5MemberDao">
+    
+    <resultMap id="g5MemberDetailResultMap" type="kr.co.hulan.aas.mvc.model.dto.G5MemberDto" autoMapping="true">
+        <id property="mbId" column="mb_id"/>
+        <collection property="otpPhoneList"
+          ofType="kr.co.hulan.aas.mvc.model.dto.MemberOtpPhoneDto"
+          column="mb_id"
+          select="findOtpPhoneList"
+        />
+    </resultMap>
+    
+    <!-- 인원 관리 > 현장관리자 목록-->
+    <select id="findFieldManagerListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        SELECT
+        G5M.mb_no
+        ,G5M.mb_id
+        ,G5M.mb_name AS name
+        ,G5M.mb_birth AS birthday
+        ,G5M.mb_zip1
+        ,G5M.mb_zip2
+        ,G5M.mb_addr1
+        ,G5M.mb_addr2
+        ,G5M.mb_addr3
+        ,G5M.mb_addr_jibeon
+        ,G5M.mb_memo
+        ,G5M.mb_ip
+        ,G5M.mb_tel AS telephone
+        ,G5M.mb_leave_date AS withdraw_date
+        ,G5M.mb_intercept_date AS block_date
+        ,G5M.mb_1 AS member_ship_no
+        ,G5M.mb_2 AS work_place
+        ,G5M.mb_4 AS work_section_a
+        ,G5M.mb_5 AS blood_type
+        ,G5M.mb_18 AS push_normal
+        ,G5M.mb_19 AS push_danger
+        ,G5M.mb_10 AS safety_education_file
+        ,G5M.mb_20 AS device_id
+        ,G5M.mb_datetime AS regist_date
+        ,G5M.mb_today_login AS latest_login
+        ,G5M.pwd_change_date
+        ,G5M.attempt_login_count
+        ,CC.cc_id
+        ,CC.cc_name
+        ,IFNULL( (
+            SELECT
+             case
+                 when count(CSM.wp_id) > 1 then concat( WP.wp_name, ' 외 ', (count(CSM.wp_id) -1 ), '건' )
+                 else WP.wp_name
+             end
+            FROM construction_site_manager CSM
+            INNER JOIN work_place WP ON WP.wp_id = CSM.wp_id
+            where CSM.mb_id = G5M.mb_id
+        ), '') AS wp_name
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON G5M.mb_12 = CC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbLevel != null '>
+            AND G5M.mb_level =  #{mbLevel}
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        ORDER BY mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 인원 관리 > 현장관리자 목록-->
+    <select id="findFieldManagerListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON G5M.mb_12 = CC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbLevel != null '>
+            AND G5M.mb_level =  #{mbLevel}
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+    </select>
+
+    <!-- 인원 관리 > 근로자 목록 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        SELECT
+        G5M.mb_no
+        ,G5M.mb_id
+        ,G5M.mb_name AS name
+        ,G5M.mb_birth AS birthday
+        ,G5M.mb_zip1
+        ,G5M.mb_zip2
+        ,G5M.mb_addr1
+        ,G5M.mb_addr2
+        ,G5M.mb_addr3
+        ,G5M.mb_addr_jibeon
+        ,G5M.mb_memo
+        ,G5M.mb_ip
+        ,G5M.mb_tel AS telephone
+        ,G5M.mb_leave_date AS withdraw_date
+        ,G5M.mb_intercept_date AS block_date
+        ,G5M.mb_1 AS member_ship_no
+        ,G5M.mb_2 AS work_place
+        ,G5M.mb_4 AS work_section_a
+        ,G5M.mb_5 AS blood_type
+        ,G5M.mb_18 AS push_normal
+        ,G5M.mb_19 AS push_danger
+        ,G5M.mb_10 AS safety_education_file
+        ,G5M.mb_20 AS device_id
+        ,G5M.mb_datetime AS regist_date
+        ,G5M.mb_today_login AS latest_login
+        ,G5M.pwd_change_date
+        ,G5M.attempt_login_count
+        ,CC.cc_id
+        ,CC.cc_name
+        ,IFNULL( ( SELECT WP.wp_name FROM work_place WP where WP.man_mb_id = G5M.mb_id limit 1), '') AS wp_name
+        ,IFNULL( (
+            SELECT COOP.mb_name
+            FROM coop_worker CW  LEFT JOIN g5_member COOP ON COOP.mb_id = CW.coop_mb_id
+            where CW.worker_mb_id = G5M.mb_id
+        ), '') AS reg_coop_mb_name
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON G5M.mb_12 = CC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+            G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_1 like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_2 like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_birth like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbLevel != null '>
+            AND G5M.mb_level =  #{mbLevel}
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND EXISTS(
+                select 1
+                from work_place WP
+                inner join work_place_worker WPW ON WPW.wp_id = WP.wp_id
+                where WP.wp_id = #{wpId}
+                and WPW.worker_mb_id = G5M.mb_id
+                LIMIT 1
+            )
+        </if>
+        <if test='excludeWpId != null and excludeWpId != "" '>
+            AND NOT EXISTS(
+                select 1
+                from work_place WP
+                inner join work_place_worker WPW ON WPW.wp_id = WP.wp_id
+                where WP.wp_id = #{excludeWpId}
+                and WPW.worker_mb_id = G5M.mb_id
+                LIMIT 1
+            )
+        </if>
+        ORDER BY mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 인원 관리 > 근로자 목록 -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON G5M.mb_12 = CC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_1 like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_2 like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_birth like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbLevel != null '>
+            AND G5M.mb_level =  #{mbLevel}
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND EXISTS(
+            select 1
+            from work_place WP
+            inner join work_place_worker WPW ON WPW.wp_id = WP.wp_id
+            where WP.wp_id = #{wpId}
+            and WPW.worker_mb_id = G5M.mb_id
+            LIMIT 1
+            )
+        </if>
+        <if test='excludeWpId != null and excludeWpId != "" '>
+            AND NOT EXISTS(
+            select 1
+            from work_place WP
+            inner join work_place_worker WPW ON WPW.wp_id = WP.wp_id
+            where WP.wp_id = #{excludeWpId}
+            and WPW.worker_mb_id = G5M.mb_id
+            LIMIT 1
+            )
+        </if>
+    </select>
+
+
+    <!-- 설정	> 최고관리자 -->
+    <select id="findSuperAdminListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        SELECT
+            G5M.mb_no
+            ,G5M.mb_id
+            ,G5M.mb_name AS name
+            ,G5M.mb_birth AS birthday
+            ,G5M.mb_zip1
+            ,G5M.mb_zip2
+            ,G5M.mb_addr1
+            ,G5M.mb_addr2
+            ,G5M.mb_addr3
+            ,G5M.mb_addr_jibeon
+            ,G5M.mb_memo
+            ,G5M.mb_ip
+            ,G5M.mb_tel AS telephone
+            ,G5M.mb_leave_date AS withdraw_date
+            ,G5M.mb_intercept_date AS block_date
+            ,G5M.mb_1 AS member_ship_no
+            ,G5M.mb_2 AS work_place
+            ,G5M.mb_4 AS work_section_a
+            ,G5M.mb_5 AS blood_type
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_10 AS safety_education_file
+            ,G5M.mb_20 AS device_id
+            ,G5M.mb_datetime AS regist_date
+            ,G5M.mb_today_login AS latest_login
+            ,G5M.pwd_change_date
+            ,G5M.attempt_login_count
+            ,CC.cc_id
+            ,CC.cc_name
+            ,IFNULL( ( SELECT WP.wp_name FROM work_place WP where WP.man_mb_id = G5M.mb_id limit 1), '') AS wp_name
+        FROM g5_member G5M
+            LEFT JOIN con_company CC ON G5M.mb_12 = CC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                G5M.mb_name like concat( '%', #{mbName} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbLevel != null '>
+            AND G5M.mb_level =  #{mbLevel}
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        ORDER BY mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="findSuperAdminListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON G5M.mb_12 = CC.cc_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                G5M.mb_name like concat( '%', #{mbName} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbLevel != null '>
+            AND G5M.mb_level =  #{mbLevel}
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+    </select>
+
+
+
+    <select id="findCooperativeCompanyCodeList"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        SELECT
+            G5M.mb_id
+            ,G5M.mb_name AS name
+        FROM g5_member G5M
+        WHERE G5M.mb_level = 3
+        <if test=' ( loginUserLevel != null and loginUserLevel != 10 ) or ( wpId != null and wpId != "" ) or ( coopMbId != null and coopMbId != "" )  or ( ccId != null and ccId != "" )   '>
+            AND EXISTS(
+                SELECT 'x'
+                FROM work_place_coop WPC
+                WHERE WPC.coop_mb_id = G5M.mb_id
+                <if test='wpId != null and wpId != "" '>
+                    AND WPC.wp_id = #{wpId}
+                </if>
+                <if test='ccId != null and ccId != "" '>
+                    AND WPC.cc_id = #{ccId}
+                </if>
+                <if test='coopMbId != null and coopMbId != "" '>
+                    AND WPC.coop_mb_id = #{coopMbId}
+                </if>
+                <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+                    <property name="aliasWp" value="WP"/>
+                    <property name="aliasWpAndCoop" value="WPC"/>
+                </include>
+                LIMIT 1
+            )
+        </if>
+        ORDER BY mb_name ASC
+    </select>
+
+
+    <!-- 현장 관리 > 협력사목록 -->
+    <select id="findCooperativeCompanyListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        SELECT
+            G5M.mb_no
+            ,G5M.mb_id
+            ,G5M.mb_name AS name
+            ,G5M.mb_birth AS birthday
+            ,G5M.mb_zip1
+            ,G5M.mb_zip2
+            ,G5M.mb_addr1
+            ,G5M.mb_addr2
+            ,G5M.mb_addr3
+            ,G5M.mb_addr_jibeon
+            ,G5M.mb_memo
+            ,G5M.mb_ip
+            ,G5M.mb_tel AS telephone
+            ,G5M.mb_leave_date AS withdraw_date
+            ,G5M.mb_intercept_date AS block_date
+            ,G5M.mb_1 AS member_ship_no
+            ,G5M.mb_2 AS work_place
+            ,G5M.work_section_a
+            ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = G5M.work_section_a), G5M.mb_4 )as work_section_name_a
+            ,G5M.mb_5 AS blood_type
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_20 AS device_id
+            ,G5M.mb_10 AS safety_education_file
+            ,G5M.mb_datetime AS regist_date
+            ,G5M.mb_today_login AS latest_login
+            ,G5M.pwd_change_date
+            ,G5M.attempt_login_count
+        FROM g5_member G5M
+        WHERE G5M.mb_level = 3
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS (
+                SELECT 'x'
+                FROM work_place WP
+                  INNER JOIN work_place_coop WPC ON WP.wp_id = WPC.wp_id AND WPC.coop_mb_id = G5M.mb_id
+                WHERE WP.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND EXISTS (
+                SELECT 'x'
+                FROM work_place WP
+                    INNER JOIN work_place_coop WPC ON WP.wp_id = WPC.wp_id AND WPC.coop_mb_id = G5M.mb_id
+                WHERE WP.wp_id = #{wpId}
+                LIMIT 1
+            )
+        </if>
+        <if test='excludeWpId != null and excludeWpId != "" '>
+            AND NOT EXISTS (
+            SELECT 'x'
+            FROM work_place_coop WPC
+            INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+            WHERE WPC.wp_id = #{excludeWpId}
+            AND WPC.coop_mb_id = G5M.mb_id
+            LIMIT 1
+            )
+        </if>
+        ORDER BY mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 현장 관리 > 협력사목록 -->
+    <select id="findCooperativeCompanyListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            count(*) AS CNT
+        FROM g5_member G5M
+        WHERE G5M.mb_level = 3
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='name != null and name != "" '>
+            AND G5M.mb_name like concat( '%', #{name} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='workPlace != null and workPlace != "" '>
+            AND G5M.mb_2 like concat( '%', #{workPlace} ,'%')
+        </if>
+        <if test='memberShipNo != null and memberShipNo != "" '>
+            AND G5M.mb_1 like concat( '%', #{memberShipNo} ,'%')
+        </if>
+        <if test='birthday != null and birthday != "" '>
+            AND G5M.mb_birth like concat( '%', #{birthday} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='block != null and block != "" '>
+            AND G5M.mb_intercept_date IS NOT NULL AND G5M.mb_intercept_date != ''
+            AND !( G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != '' )
+        </if>
+        <if test='withdraw != null and withdraw != "" '>
+            AND G5M.mb_leave_date IS NOT NULL AND G5M.mb_leave_date != ''
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND EXISTS (
+                SELECT 'x'
+                FROM work_place WP
+                INNER JOIN work_place_coop WPC ON WP.wp_id = WPC.wp_id AND WPC.coop_mb_id = G5M.mb_id
+                WHERE WP.cc_id = #{ccId}
+                LIMIT 1
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND EXISTS (
+                SELECT 'x'
+                FROM work_place WP
+                INNER JOIN work_place_coop WPC ON WP.wp_id = WPC.wp_id AND WPC.coop_mb_id = G5M.mb_id
+                WHERE WP.wp_id = #{wpId}
+                LIMIT 1
+            )
+        </if>
+        <if test='excludeWpId != null and excludeWpId != "" '>
+            AND NOT EXISTS (
+            SELECT 'x'
+            FROM work_place_coop WPC
+            INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+            WHERE WPC.wp_id = #{excludeWpId}
+            AND WPC.coop_mb_id = G5M.mb_id
+            LIMIT 1
+            )
+        </if>
+    </select>
+
+
+
+    <select id="findWorkplaceWorkerListForNoticeByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        SELECT
+            G5M.mb_no
+            ,G5M.mb_id
+            ,G5M.mb_name AS name
+            ,G5M.mb_birth AS birthday
+            ,G5M.mb_zip1
+            ,G5M.mb_zip2
+            ,G5M.mb_addr1
+            ,G5M.mb_addr2
+            ,G5M.mb_addr3
+            ,G5M.mb_addr_jibeon
+            ,G5M.mb_memo
+            ,G5M.mb_ip
+            ,G5M.mb_tel AS telephone
+            ,G5M.mb_leave_date AS withdraw_date
+            ,G5M.mb_intercept_date AS block_date
+            ,G5M.mb_1 AS member_ship_no
+            ,G5M.mb_2 AS work_place
+            ,G5M.mb_4 AS work_section_a
+            ,G5M.mb_5 AS blood_type
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_20 AS device_id
+            ,G5M.mb_10 AS safety_education_file
+            ,G5M.mb_datetime AS regist_date
+            ,G5M.mb_today_login AS latest_login
+            ,G5M.app_version
+        FROM g5_member G5M
+            INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = G5M.mb_id
+            INNER JOIN work_place WP ON WP.wp_id = WPW.wp_id
+        WHERE G5M.mb_level = 2
+        AND WP.wp_id = #{wpId}
+        AND WPW.wpw_status = 1
+        <if test='attendance != null and attendance != "" '>
+        AND EXISTS(
+            select 1
+            from attendance_book ATDB
+            where ATDB.working_day =  DATE_FORMAT( NOW(), '%Y%m%d')
+            and ATDB.wp_id = WPW.wp_id
+            and ATDB.mb_id = WPW.worker_mb_id
+            LIMIT 1
+        )
+        </if>
+        AND G5M.mb_18 = 1
+    </select>
+
+    <select id="findDuplicatedMemberCount"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            COUNT(*)
+        FROM g5_member G5M
+        WHERE (
+            replace(G5M.mb_id, '-', '') = replace(#{mb_key}, '-', '')
+            or replace(G5M.mb_tel, '-', '') = replace(#{mb_key}, '-', '')
+            or replace(G5M.mb_hp, '-', '') = replace(#{mb_key}, '-', '')
+        )
+        <if test='current_mb_id != null and current_mb_id != "" '>
+            AND G5M.mb_id != #{current_mb_id}
+        </if>
+    </select>
+
+
+    <select id="findByMbId"
+            parameterType="string"
+            resultMap="g5MemberDetailResultMap">
+        SELECT
+            G5M.mb_no
+            ,G5M.mb_id
+            ,G5M.mb_name AS name
+            ,G5M.mb_birth AS birthday
+            ,G5M.mb_level
+            ,G5M.mb_zip1
+            ,G5M.mb_zip2
+            ,G5M.mb_addr1
+            ,G5M.mb_addr2
+            ,G5M.mb_addr3
+            ,G5M.mb_addr_jibeon
+            ,G5M.mb_memo
+            ,G5M.mb_ip
+            ,G5M.mb_leave_date AS withdraw_date
+            ,G5M.mb_intercept_date AS block_date
+            ,G5M.mb_tel AS telephone
+            ,G5M.mb_1 AS member_ship_no
+            ,G5M.mb_2 AS work_place
+            ,G5M.mb_4 AS work_section_a
+            ,G5M.mb_5 AS blood_type
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_10 AS safety_education_file
+            ,G5M.mb_datetime AS regist_date
+            ,G5M.mb_today_login AS latest_login
+            ,G5M.pwd_change_date
+            ,G5M.attempt_login_count
+            ,G5M.app_version
+            ,CC.cc_id
+            ,CC.cc_name
+            ,IFNULL( ( SELECT WP.wp_name FROM work_place WP where WP.man_mb_id = G5M.mb_id limit 1), '') AS wp_name
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON G5M.mb_12 = CC.cc_id
+        WHERE mb_id = #{mbId}
+    </select>
+
+    <insert id="createWorker" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        INSERT INTO g5_member (
+            mb_id
+            ,mb_password
+            ,mb_name
+            ,mb_nick
+            ,mb_level
+            ,mb_birth
+            ,mb_zip1
+            ,mb_zip2
+            ,mb_addr1
+            ,mb_addr2
+            ,mb_addr3
+            ,mb_addr_jibeon
+            ,mb_datetime
+            ,mb_ip
+            ,mb_leave_date
+            ,mb_intercept_date
+            ,mb_email_certify
+            ,mb_memo
+            ,mb_1
+            ,mb_2
+            ,mb_5
+            <if test='safetyEducationFile != null and safetyEducationFile != "" '>,mb_10</if>
+            ,mb_18
+            ,mb_19
+        )
+        VALUES (
+            #{mbId}
+            ,#{mbPassword}
+            ,#{name}
+            ,#{name}
+            ,#{mbLevel}
+            ,#{birthday}
+            ,#{mbZip1}
+            ,#{mbZip2}
+            ,#{mbAddr1}
+            ,#{mbAddr2}
+            ,#{mbAddr3}
+            ,#{mbAddrJibeon}
+            ,NOW()
+            ,#{mbIp}
+            ,#{withdrawDate}
+            ,#{blockDate}
+            ,NOW()
+            ,#{mbMemo}
+            ,#{memberShipNo}
+            ,#{workPlace}
+            ,#{bloodType}
+            <if test='safetyEducationFile != null and safetyEducationFile != "" '>,#{safetyEducationFile}</if>
+            ,#{pushNormal}
+            ,#{pushDanger}
+        );
+        <selectKey keyProperty="mbNo" resultType="java.lang.Long" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <update id="updateWorker" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+         UPDATE g5_member
+         SET
+            mb_name = #{name}
+            ,mb_nick = #{name}
+            <if test='mbPassword != null and mbPassword != "" '>
+            ,mb_password=#{mbPassword}
+            ,pwd_change_date=NOW()
+            ,attempt_login_count=0
+            </if>
+            ,mb_zip1 = #{mbZip1}
+            ,mb_zip2 = #{mbZip2}
+            ,mb_addr1 = #{mbAddr1}
+            ,mb_addr2 = #{mbAddr2}
+            ,mb_addr3 = #{mbAddr3}
+            ,mb_addr_jibeon = #{mbAddrJibeon}
+            ,mb_birth = #{birthday}
+            ,mb_leave_date = #{withdrawDate}
+            ,mb_intercept_date = #{blockDate}
+            ,mb_memo = #{mbMemo}
+            ,mb_2 = #{workPlace}
+            ,mb_5 = #{bloodType}
+            ,mb_10 = #{safetyEducationFile,jdbcType=VARCHAR}
+            ,mb_18 = #{pushNormal}
+            ,mb_19 = #{pushDanger}
+         WHERE mb_id = #{mbId}
+    </update>
+    
+    <select id="findOtpPhoneList"
+      parameterType="string"
+      resultType="kr.co.hulan.aas.mvc.model.dto.MemberOtpPhoneDto">
+        SELECT
+          MOP.mb_id
+          ,MOP.phone_no
+          ,MOP.uuid
+        FROM member_otp_phone MOP
+        WHERE MOP.mb_id = #{mbId}
+        ORDER BY MOP.phone_no
+    </select>
+
+    <insert id="createFieldManager" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        INSERT INTO g5_member (
+            mb_id
+            ,mb_password
+            ,mb_name
+            ,mb_nick
+            ,mb_level
+            ,mb_zip1
+            ,mb_zip2
+            ,mb_addr1
+            ,mb_addr2
+            ,mb_addr3
+            ,mb_addr_jibeon
+            ,mb_datetime
+            ,mb_tel
+            ,mb_ip
+            ,mb_leave_date
+            ,mb_intercept_date
+            ,mb_email_certify
+            ,mb_memo
+            ,mb_1
+            ,mb_12
+            ,mb_13
+            ,mb_18
+            ,mb_19
+            ,cc_id
+        )
+        VALUES (
+            #{mbId}
+            ,#{mbPassword}
+            ,#{name}
+            ,#{name}
+            ,#{mbLevel}
+            ,#{mbZip1}
+            ,#{mbZip2}
+            ,#{mbAddr1}
+            ,#{mbAddr2}
+            ,#{mbAddr3}
+            ,#{mbAddrJibeon}
+            ,NOW()
+            ,#{telephone}
+            ,#{mbIp}
+            ,#{withdrawDate}
+            ,#{blockDate}
+            ,NOW()
+            ,#{mbMemo}
+            ,#{mbId}
+            ,#{mb12}
+            ,#{mb13}
+            ,#{pushNormal}
+            ,#{pushDanger}
+            ,#{mb12}
+        );
+        <selectKey keyProperty="mbNo" resultType="java.lang.Long" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <update id="updateFieldManager" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        UPDATE g5_member
+        SET
+        mb_name = #{name}
+        ,mb_nick = #{name}
+        <if test='mbPassword != null and mbPassword != "" '>
+            ,mb_password=#{mbPassword}
+            ,pwd_change_date=NOW()
+            ,attempt_login_count=0
+        </if>
+        ,mb_zip1 = #{mbZip1}
+        ,mb_zip2 = #{mbZip2}
+        ,mb_addr1 = #{mbAddr1}
+        ,mb_addr2 = #{mbAddr2}
+        ,mb_addr3 = #{mbAddr3}
+        ,mb_addr_jibeon = #{mbAddrJibeon}
+        ,mb_leave_date = #{withdrawDate}
+        ,mb_intercept_date = #{blockDate}
+        ,mb_memo = #{mbMemo}
+        ,mb_tel = #{telephone}
+        ,mb_12 = #{mb12}
+        ,mb_13 = #{mb13}
+        ,mb_18 = #{pushNormal}
+        ,mb_19 = #{pushDanger}
+        ,cc_id = #{mb12}
+        WHERE mb_id = #{mbId}
+    </update>
+
+
+
+    <insert id="createCooperativeCompany" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        INSERT INTO g5_member (
+            mb_id
+            ,mb_password
+            ,mb_name
+            ,mb_nick
+            ,mb_level
+            ,mb_zip1
+            ,mb_zip2
+            ,mb_addr1
+            ,mb_addr2
+            ,mb_addr3
+            ,mb_addr_jibeon
+            ,mb_datetime
+            ,mb_tel
+            ,mb_ip
+            ,mb_leave_date
+            ,mb_intercept_date
+            ,mb_email_certify
+            ,mb_memo
+            ,mb_1
+            ,mb_4
+            ,mb_18
+            ,mb_19
+            ,work_section_a
+        )
+        VALUES (
+            #{mbId}
+            ,#{mbPassword}
+            ,#{name}
+            ,#{name}
+            ,#{mbLevel}
+            ,#{mbZip1}
+            ,#{mbZip2}
+            ,#{mbAddr1}
+            ,#{mbAddr2}
+            ,#{mbAddr3}
+            ,#{mbAddrJibeon}
+            ,NOW()
+            ,#{telephone}
+            ,#{mbIp}
+            ,#{withdrawDate}
+            ,#{blockDate}
+            ,NOW()
+            ,#{mbMemo}
+            ,#{memberShipNo}
+            ,#{workSectionA}
+            ,#{pushNormal}
+            ,#{pushDanger}
+            ,#{workSectionA}
+        );
+        <selectKey keyProperty="mbNo" resultType="java.lang.Long" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+    </insert>
+
+    <update id="updateCooperativeCompany" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        UPDATE g5_member
+        SET
+            mb_name = #{name}
+            ,mb_nick = #{name}
+            <if test='mbPassword != null and mbPassword != "" '>
+            ,mb_password=#{mbPassword}
+            ,pwd_change_date=NOW()
+            ,attempt_login_count=0
+            </if>
+            ,mb_zip1 = #{mbZip1}
+            ,mb_zip2 = #{mbZip2}
+            ,mb_addr1 = #{mbAddr1}
+            ,mb_addr2 = #{mbAddr2}
+            ,mb_addr3 = #{mbAddr3}
+            ,mb_addr_jibeon = #{mbAddrJibeon}
+            ,mb_leave_date = #{withdrawDate}
+            ,mb_intercept_date = #{blockDate}
+            ,mb_memo = #{mbMemo}
+            ,mb_tel = #{telephone}
+            ,mb_4 = #{workSectionA}
+            ,work_section_a = #{workSectionA}
+            ,mb_18 = #{pushNormal}
+            ,mb_19 = #{pushDanger}
+        WHERE mb_id = #{mbId}
+    </update>
+
+
+    <insert id="createSuperAdmin" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        INSERT INTO g5_member (
+            mb_id
+            ,mb_password
+            ,mb_name
+            ,mb_nick
+            ,mb_level
+            ,mb_zip1
+            ,mb_zip2
+            ,mb_addr1
+            ,mb_addr2
+            ,mb_addr3
+            ,mb_addr_jibeon
+            ,mb_datetime
+            ,mb_tel
+            ,mb_ip
+            ,mb_leave_date
+            ,mb_intercept_date
+            ,mb_email_certify
+            ,mb_memo
+            ,mb_1
+        )
+        VALUES (
+            #{mbId}
+            ,#{mbPassword}
+            ,#{name}
+            ,#{name}
+            ,#{mbLevel}
+            ,#{mbZip1}
+            ,#{mbZip2}
+            ,#{mbAddr1}
+            ,#{mbAddr2}
+            ,#{mbAddr3}
+            ,#{mbAddrJibeon}
+            ,NOW()
+            ,#{telephone}
+            ,#{mbIp}
+            ,#{withdrawDate}
+            ,#{blockDate}
+            ,NOW()
+            ,#{mbMemo}
+            ,#{memberShipNo}
+        );
+    </insert>
+
+    <update id="updateSuperAdmin" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        UPDATE g5_member
+        SET
+        mb_name = #{name}
+        ,mb_nick = #{name}
+        <if test='mbPassword != null and mbPassword != "" '>
+            ,mb_password=#{mbPassword}
+            ,pwd_change_date=NOW()
+            ,attempt_login_count=0
+        </if>
+        ,mb_zip1 = #{mbZip1}
+        ,mb_zip2 = #{mbZip2}
+        ,mb_addr1 = #{mbAddr1}
+        ,mb_addr2 = #{mbAddr2}
+        ,mb_addr3 = #{mbAddr3}
+        ,mb_addr_jibeon = #{mbAddrJibeon}
+        ,mb_leave_date = #{withdrawDate}
+        ,mb_intercept_date = #{blockDate}
+        ,mb_memo = #{mbMemo}
+        ,mb_tel = #{telephone}
+        WHERE mb_id = #{mbId}
+    </update>
+
+    <update id="updateLoginSuccess" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        UPDATE g5_member
+        SET
+            mb_today_login = #{latestLogin}
+            ,mb_login_ip = #{mbLoginIp}
+            ,attempt_login_count = #{attemptLoginCount}
+        WHERE mb_id = #{mbId}
+    </update>
+
+    <update id="updateLoginFail" parameterType="kr.co.hulan.aas.mvc.model.dto.G5MemberDto">
+        UPDATE g5_member
+        SET
+            attempt_login_count = #{attemptLoginCount}
+        WHERE mb_id = #{mbId}
+    </update>
+    
+    
+    <insert id="createOrUpdateOtpPhone" parameterType="kr.co.hulan.aas.mvc.model.dto.MemberOtpPhoneDto">
+        INSERT INTO member_otp_phone (
+           mb_id
+          ,phone_no
+          ,uuid
+          ,create_date
+          ,creator
+        )
+        VALUES (
+            #{mbId}
+            ,#{phoneNo}
+            ,REPLACE(UUID(),'-','')
+            ,NOW()
+            ,#{creator}
+        )
+        ON DUPLICATE KEY UPDATE
+            uuid = REPLACE(UUID(),'-','')
+    </insert>
+    
+    <insert id="deleteAllOtpPhone" parameterType="string">
+        DELETE FROM member_otp_phone
+        WHERE mb_id = #{mbId}
+    </insert>
+    
+    
+    <!-- ########################################################
+    ## 발주사 관리자 관리
+    ######################################################## -->
+    
+    <!-- 발주사 관리자  리스트 -->
+    <select id="findOfficeManagerListByCondition"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.member.dto.OfficeManagerDto">
+        SELECT
+            G5M.mb_no
+            ,G5M.mb_id
+            ,G5M.mb_name AS name
+            ,G5M.mb_birth AS birthday
+            ,G5M.mb_zip1
+            ,G5M.mb_zip2
+            ,G5M.mb_addr1
+            ,G5M.mb_addr2
+            ,G5M.mb_addr3
+            ,G5M.mb_addr_jibeon
+            ,G5M.mb_memo
+            ,G5M.mb_ip
+            ,G5M.mb_tel AS telephone
+            ,G5M.mb_leave_date AS withdraw_date
+            ,G5M.mb_intercept_date AS block_date
+            ,G5M.mb_1 AS member_ship_no
+            ,G5M.mb_2 AS work_place
+            ,G5M.mb_4 AS work_section_a
+            ,G5M.mb_5 AS blood_type
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_10 AS safety_education_file
+            ,G5M.mb_20 AS device_id
+            ,G5M.mb_datetime AS regist_date
+            ,G5M.mb_today_login AS latest_login
+            ,G5M.pwd_change_date
+            ,G5M.attempt_login_count
+            ,OROF.office_no
+            ,OROF.office_name
+        FROM g5_member G5M
+        LEFT JOIN ordering_office OROF ON OROF.office_no = G5M.office_no
+        WHERE G5M.mb_level = 7
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+                OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='officeNo != null '>
+          AND G5M.office_no = #{officeNo}
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='officeName != null and officeName != "" '>
+            AND OROF.office_name like concat( '%', #{officeName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+        ORDER BY G5M.mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+    
+    <!-- 발주사 관리자 리스트 카운트 -->
+    <select id="countOfficeManagerListByCondition"
+      parameterType="map"
+      resultType="long">
+        SELECT
+           count(*) as cnt
+        FROM g5_member G5M
+        LEFT JOIN ordering_office OROF ON OROF.office_no = G5M.office_no
+        WHERE G5M.mb_level = 7
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+            OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='officeNo != null '>
+            AND G5M.office_no = #{officeNo}
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='officeName != null and officeName != "" '>
+            AND OROF.office_name like concat( '%', #{officeName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+    </select>
+    
+    <!-- 발주사 관리자 상세 정보 -->
+    <select id="findOfficeManagerInfo"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.member.dto.OfficeManagerDto">
+        SELECT
+            G5M.mb_no
+            ,G5M.mb_id
+            ,G5M.mb_name AS name
+            ,G5M.mb_birth AS birthday
+            ,G5M.mb_zip1
+            ,G5M.mb_zip2
+            ,G5M.mb_addr1
+            ,G5M.mb_addr2
+            ,G5M.mb_addr3
+            ,G5M.mb_addr_jibeon
+            ,G5M.mb_memo
+            ,G5M.mb_ip
+            ,G5M.mb_tel AS telephone
+            ,G5M.mb_leave_date AS withdraw_date
+            ,G5M.mb_intercept_date AS block_date
+            ,G5M.mb_1 AS member_ship_no
+            ,G5M.mb_2 AS work_place
+            ,G5M.mb_4 AS work_section_a
+            ,G5M.mb_5 AS blood_type
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_10 AS safety_education_file
+            ,G5M.mb_20 AS device_id
+            ,G5M.mb_datetime AS regist_date
+            ,G5M.mb_today_login AS latest_login
+            ,G5M.pwd_change_date
+            ,G5M.attempt_login_count
+            ,OROF.office_no
+            ,OROF.office_name
+        FROM g5_member G5M
+        LEFT JOIN ordering_office OROF ON OROF.office_no = G5M.office_no
+        WHERE G5M.mb_level = 7
+        AND G5M.mb_id = #{mbId}
+    </select>
+    
+    
+    <!-- ########################################################
+    ## 발주사 현장그룹 매니저 관리
+    ######################################################## -->
+    
+    <!-- 발주사 현장그룹 매니저  리스트 -->
+    <select id="findOfficeGroupManagerListByCondition"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.member.dto.OfficeGroupManagerDto">
+        SELECT
+        G5M.mb_no
+        ,G5M.mb_id
+        ,G5M.mb_name AS name
+        ,G5M.mb_birth AS birthday
+        ,G5M.mb_zip1
+        ,G5M.mb_zip2
+        ,G5M.mb_addr1
+        ,G5M.mb_addr2
+        ,G5M.mb_addr3
+        ,G5M.mb_addr_jibeon
+        ,G5M.mb_memo
+        ,G5M.mb_ip
+        ,G5M.mb_tel AS telephone
+        ,G5M.mb_leave_date AS withdraw_date
+        ,G5M.mb_intercept_date AS block_date
+        ,G5M.mb_1 AS member_ship_no
+        ,G5M.mb_2 AS work_place
+        ,G5M.mb_4 AS work_section_a
+        ,G5M.mb_5 AS blood_type
+        ,G5M.mb_18 AS push_normal
+        ,G5M.mb_19 AS push_danger
+        ,G5M.mb_10 AS safety_education_file
+        ,G5M.mb_20 AS device_id
+        ,G5M.mb_datetime AS regist_date
+        ,G5M.mb_today_login AS latest_login
+        ,G5M.pwd_change_date
+        ,G5M.attempt_login_count
+        ,OROF.office_no
+        ,OROF.office_name
+        FROM g5_member G5M
+        LEFT JOIN ordering_office OROF ON OROF.office_no = G5M.office_no
+        WHERE G5M.mb_level = 6
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+            OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='officeNo != null '>
+            AND G5M.office_no = #{officeNo}
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='officeName != null and officeName != "" '>
+            AND OROF.office_name like concat( '%', #{officeName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+        <if test='wpGrpNo != null '>
+            AND exists(
+                select 1
+                from office_workplace_manager OWM
+                where OWM.mb_id = G5M.mb_id
+                and OWM.wp_grp_no = #{wpGrpNo}
+                LIMIT 1
+            )
+        </if>
+        <if test='excludeWpGrpNo != null '>
+            AND not exists(
+            select 1
+            from office_workplace_manager OWM
+            where OWM.mb_id = G5M.mb_id
+            and OWM.wp_grp_no = #{excludeWpGrpNo}
+            LIMIT 1
+            )
+        </if>
+        ORDER BY G5M.mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+    
+    <!-- 발주사 현장그룹 매니저 리스트 카운트 -->
+    <select id="countOfficeGroupManagerListByCondition"
+      parameterType="map"
+      resultType="long">
+        SELECT
+        count(*) as cnt
+        FROM g5_member G5M
+        LEFT JOIN ordering_office OROF ON OROF.office_no = G5M.office_no
+        WHERE G5M.mb_level = 6
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+            OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='officeNo != null '>
+            AND G5M.office_no = #{officeNo}
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='officeName != null and officeName != "" '>
+            AND OROF.office_name like concat( '%', #{officeName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+        <if test='wpGrpNo != null '>
+            AND exists(
+            select 1
+            from office_workplace_manager OWM
+            where OWM.mb_id = G5M.mb_id
+            and OWM.wp_grp_no = #{wpGrpNo}
+            LIMIT 1
+            )
+        </if>
+        <if test='excludeWpGrpNo != null '>
+            AND not exists(
+            select 1
+            from office_workplace_manager OWM
+            where OWM.mb_id = G5M.mb_id
+            and OWM.wp_grp_no = #{excludeWpGrpNo}
+            LIMIT 1
+            )
+        </if>
+    </select>
+    
+    <!-- 발주사 현장그룹 매니저 상세 정보 -->
+    <select id="findOfficeGroupManagerInfo"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.member.dto.OfficeGroupManagerDto">
+        SELECT
+            G5M.mb_no
+             ,G5M.mb_id
+             ,G5M.mb_name AS name
+             ,G5M.mb_birth AS birthday
+             ,G5M.mb_zip1
+             ,G5M.mb_zip2
+             ,G5M.mb_addr1
+             ,G5M.mb_addr2
+             ,G5M.mb_addr3
+             ,G5M.mb_addr_jibeon
+             ,G5M.mb_memo
+             ,G5M.mb_ip
+             ,G5M.mb_tel AS telephone
+             ,G5M.mb_leave_date AS withdraw_date
+             ,G5M.mb_intercept_date AS block_date
+             ,G5M.mb_1 AS member_ship_no
+             ,G5M.mb_2 AS work_place
+             ,G5M.mb_4 AS work_section_a
+             ,G5M.mb_5 AS blood_type
+             ,G5M.mb_18 AS push_normal
+             ,G5M.mb_19 AS push_danger
+             ,G5M.mb_10 AS safety_education_file
+             ,G5M.mb_20 AS device_id
+             ,G5M.mb_datetime AS regist_date
+             ,G5M.mb_today_login AS latest_login
+             ,G5M.pwd_change_date
+             ,G5M.attempt_login_count
+             ,OROF.office_no
+             ,OROF.office_name
+        FROM g5_member G5M
+                 LEFT JOIN ordering_office OROF ON OROF.office_no = G5M.office_no
+        WHERE G5M.mb_level = 6
+          AND G5M.mb_id = #{mbId}
+    </select>
+    
+    
+    
+    <!-- ########################################################
+    ## 건설사 관리자 관리
+    ######################################################## -->
+    
+    <!-- 건설사 관리자  리스트 -->
+    <select id="findConCompanyManagerListByCondition"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.member.dto.ConCompanyManagerDto">
+        SELECT
+            G5M.mb_no
+            ,G5M.mb_id
+            ,G5M.mb_name AS name
+            ,G5M.mb_birth AS birthday
+            ,G5M.mb_zip1
+            ,G5M.mb_zip2
+            ,G5M.mb_addr1
+            ,G5M.mb_addr2
+            ,G5M.mb_addr3
+            ,G5M.mb_addr_jibeon
+            ,G5M.mb_memo
+            ,G5M.mb_ip
+            ,G5M.mb_tel AS telephone
+            ,G5M.mb_leave_date AS withdraw_date
+            ,G5M.mb_intercept_date AS block_date
+            ,G5M.mb_1 AS member_ship_no
+            ,G5M.mb_2 AS work_place
+            ,G5M.mb_4 AS work_section_a
+            ,G5M.mb_5 AS blood_type
+            ,G5M.mb_18 AS push_normal
+            ,G5M.mb_19 AS push_danger
+            ,G5M.mb_10 AS safety_education_file
+            ,G5M.mb_20 AS device_id
+            ,G5M.mb_datetime AS regist_date
+            ,G5M.mb_today_login AS latest_login
+            ,G5M.pwd_change_date
+            ,G5M.attempt_login_count
+            ,CC.cc_id
+            ,CC.cc_name
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON CC.cc_id = G5M.cc_id
+        WHERE G5M.mb_level = 5
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+                CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='ccName != null '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionCompany">
+            <property name="aliasConstructionCompany" value="CC"/>
+        </include>
+        ORDER BY G5M.mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+    
+    <!-- 건설사 관리자 리스트 카운트 -->
+    <select id="countConCompanyManagerListByCondition"
+      parameterType="map"
+      resultType="long">
+        SELECT
+        count(*) as cnt
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON CC.cc_id = G5M.cc_id
+        WHERE G5M.mb_level = 5
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+            CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='ccId != null '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        <if test='startDate != null  '>
+            AND G5M.mb_datetime >= #{startDate}
+        </if>
+        <if test='endDate != null  '>
+            AND G5M.mb_datetime <![CDATA[<=]]> #{endDate}
+        </if>
+        <if test='ccName != null '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportConstructionCompany">
+            <property name="aliasConstructionCompany" value="CC"/>
+        </include>
+    </select>
+    
+    <!-- 건설사 관리자 상세 정보 -->
+    <select id="findConCompanyManagerInfo"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.member.dto.ConCompanyManagerDto">
+        SELECT
+            G5M.mb_no
+             ,G5M.mb_id
+             ,G5M.mb_name AS name
+             ,G5M.mb_birth AS birthday
+             ,G5M.mb_zip1
+             ,G5M.mb_zip2
+             ,G5M.mb_addr1
+             ,G5M.mb_addr2
+             ,G5M.mb_addr3
+             ,G5M.mb_addr_jibeon
+             ,G5M.mb_memo
+             ,G5M.mb_ip
+             ,G5M.mb_tel AS telephone
+             ,G5M.mb_leave_date AS withdraw_date
+             ,G5M.mb_intercept_date AS block_date
+             ,G5M.mb_1 AS member_ship_no
+             ,G5M.mb_2 AS work_place
+             ,G5M.mb_4 AS work_section_a
+             ,G5M.mb_5 AS blood_type
+             ,G5M.mb_18 AS push_normal
+             ,G5M.mb_19 AS push_danger
+             ,G5M.mb_10 AS safety_education_file
+             ,G5M.mb_20 AS device_id
+             ,G5M.mb_datetime AS regist_date
+             ,G5M.mb_today_login AS latest_login
+             ,G5M.pwd_change_date
+             ,G5M.attempt_login_count
+             ,CC.cc_id
+             ,CC.cc_name
+        FROM g5_member G5M
+        LEFT JOIN con_company CC ON CC.cc_id = G5M.cc_id
+        WHERE G5M.mb_level = 5
+          AND G5M.mb_id = #{mbId}
+    </select>
+    
+    <!-- 건설현장 관리자 리스트 -->
+    <select id="findConstructionSiteManagerListByCondition"
+      parameterType="map"
+      resultType="kr.co.hulan.aas.mvc.api.member.dto.ConstructionSiteManagerDto">
+        SELECT
+        G5M.mb_no
+        ,G5M.mb_id
+        ,G5M.mb_name AS name
+        ,G5M.mb_birth AS birthday
+        ,G5M.mb_zip1
+        ,G5M.mb_zip2
+        ,G5M.mb_addr1
+        ,G5M.mb_addr2
+        ,G5M.mb_addr3
+        ,G5M.mb_addr_jibeon
+        ,G5M.mb_memo
+        ,G5M.mb_ip
+        ,G5M.mb_tel AS telephone
+        ,G5M.mb_leave_date AS withdraw_date
+        ,G5M.mb_intercept_date AS block_date
+        ,G5M.mb_1 AS member_ship_no
+        ,G5M.mb_2 AS work_place
+        ,G5M.mb_4 AS work_section_a
+        ,G5M.mb_5 AS blood_type
+        ,G5M.mb_18 AS push_normal
+        ,G5M.mb_19 AS push_danger
+        ,G5M.mb_10 AS safety_education_file
+        ,G5M.mb_20 AS device_id
+        ,G5M.mb_datetime AS regist_date
+        ,G5M.mb_today_login AS latest_login
+        ,G5M.pwd_change_date
+        ,G5M.attempt_login_count
+        FROM g5_member G5M
+        WHERE G5M.mb_level = 4
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+            G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+        <if  test=' ( wpId != null and wpId != "" ) or ( ccId != null and ccId != "" ) '>
+            AND EXISTS(
+            select 1
+            from construction_site_manager CSM
+            where CSM.mb_id = G5M.mb_id
+            <if test='wpId != null and wpId != "" '>
+                and CSM.wp_id = #{wpId}
+            </if>
+            <if test='ccId != null and ccId != "" '>
+                and CSM.cc_id = #{ccId}
+            </if>
+            limit 1
+            )
+        </if>
+        <if  test=' ( excludeWpId != null and excludeWpId != "" ) or ( excludeCcId != null and excludeCcId != "" ) '>
+            AND NOT EXISTS(
+            select 1
+            from construction_site_manager CSM
+            where CSM.mb_id = G5M.mb_id
+            <if test='excludeWpId != null and excludeWpId != "" '>
+                and CSM.wp_id = #{excludeWpId}
+            </if>
+            <if test='excludeCcId != null and excludeCcId != "" '>
+                and CSM.cc_id = #{excludeCcId}
+            </if>
+            limit 1
+            )
+            <if test='excludeCcId != null and excludeCcId != "" '>
+                and G5M.mb_12 = #{excludeCcId}
+            </if>
+        </if>
+        <if test='belongCcId != null and belongCcId != "" '>
+            AND G5M.mb_12 = #{ belongCcId }
+        </if>
+        ORDER BY G5M.mb_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+    
+    <!-- 건설현장 관리자 리스트 카운트 -->
+    <select id="countConstructionSiteManagerListByCondition"
+      parameterType="map"
+      resultType="long">
+        SELECT
+        count(*) as cnt
+        FROM g5_member G5M
+        WHERE G5M.mb_level = 4
+        <if test=' COMPLEX != null and COMPLEX != "" '>
+            AND (
+            G5M.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            G5M.mb_tel like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND G5M.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND G5M.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='telephone != null and telephone != "" '>
+            AND G5M.mb_tel like concat( '%', #{telephone} ,'%')
+        </if>
+        <if  test=' ( wpId != null and wpId != "" ) or ( ccId != null and ccId != "" ) '>
+            AND EXISTS(
+            select 1
+            from construction_site_manager CSM
+            where CSM.mb_id = G5M.mb_id
+            <if test='wpId != null and wpId != "" '>
+                and CSM.wp_id = #{wpId}
+            </if>
+            <if test='ccId != null and ccId != "" '>
+                and CSM.cc_id = #{ccId}
+            </if>
+            limit 1
+            )
+        </if>
+        <if  test=' ( excludeWpId != null and excludeWpId != "" ) or ( excludeCcId != null and excludeCcId != "" ) '>
+            AND NOT EXISTS(
+            select 1
+            from construction_site_manager CSM
+            where CSM.mb_id = G5M.mb_id
+            <if test='excludeWpId != null and excludeWpId != "" '>
+                and CSM.wp_id = #{excludeWpId}
+            </if>
+            <if test='excludeCcId != null and excludeCcId != "" '>
+                and CSM.cc_id = #{excludeCcId}
+            </if>
+            limit 1
+            )
+            <if test='excludeCcId != null and excludeCcId != "" '>
+                and G5M.mb_12 = #{excludeCcId}
+            </if>
+        </if>
+        <if test='belongCcId != null and belongCcId != "" '>
+            AND G5M.mb_12 = #{ belongCcId }
+        </if>
+    </select>
+</mapper>
+

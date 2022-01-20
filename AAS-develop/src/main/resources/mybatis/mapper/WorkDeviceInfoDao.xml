@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkDeviceInfoDao">
+
+    <!-- 현장 디바이스 정보 -->
+    <select id="findListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkDeviceInfoDto">
+        SELECT
+            WDI.idx
+            ,WDI.wp_id
+            ,WDI.device_type
+            ,WDI.device_id
+            ,WDI.mac_address_type
+            ,WDI.mac_address
+            ,WDI.use_sensory_temp
+            ,WDI.ref_device
+            ,WDI.update_datetime
+            ,WDI.updater
+            ,WP.wp_name
+        FROM work_device_info WDI
+        INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='deviceId != null and deviceId != "" '>
+            AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+        </if>
+        <if test='macAddress != null and macAddress != "" '>
+            AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+        </if>
+        <if test='deviceType != null '>
+            AND WDI.device_type = #{deviceType}
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+        ORDER BY WDI.update_datetime DESC
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
+    </select>
+
+    <!-- 현장별 GPS 정책  -->
+    <select id="findListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+        count(*) AS CNT
+        FROM work_device_info WDI
+        INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+                WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WDI.device_id like concat( '%', #{COMPLEX} ,'%')
+                OR
+                WDI.mac_address like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WP.wp_id = #{wpId}
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WP.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='deviceId != null and deviceId != "" '>
+            AND WDI.device_id like concat( '%', #{deviceId} ,'%')
+        </if>
+        <if test='macAddress != null and macAddress != "" '>
+            AND WDI.mac_address like concat( '%', #{macAddress} ,'%')
+        </if>
+        <if test='deviceType != null '>
+            AND WDI.device_type = #{deviceType}
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+            <property name="aliasWorkplace" value="WP"/>
+        </include>
+    </select>
+
+    <select id="findById"
+            parameterType="int"
+            resultType="kr.co.hulan.aas.mvc.model.dto.WorkDeviceInfoDto">
+        SELECT
+            WDI.idx
+            ,WDI.wp_id
+            ,WDI.device_type
+            ,WDI.device_id
+            ,WDI.mac_address_type
+            ,WDI.mac_address
+            ,WDI.use_sensory_temp
+            ,WDI.ref_device
+            ,WDI.update_datetime
+            ,WDI.updater
+            ,WP.wp_name
+        FROM work_device_info WDI
+        INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+        WHERE WDI.idx = #{idx}
+    </select>
+    
+    <select id="findDeviceStateByWpId"
+      resultType="kr.co.hulan.aas.mvc.api.hicc.vo.workplace.HiccWorkplaceDeviceStateVo">
+        SELECT
+            WDI.device_type, count(*) as device_count
+        FROM work_device_info WDI
+        INNER JOIN work_place WP ON WP.wp_id = WDI.wp_id
+        WHERE WP.wp_id = #{wpId}
+        GROUP BY WDI.device_type
+        ORDER BY WDI.device_type
+    </select>
+
+</mapper>

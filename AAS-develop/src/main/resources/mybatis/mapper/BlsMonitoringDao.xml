@@ -1,0 +1,944 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.BlsMonitoringDao">
+  
+  
+  <select id="findCurrentWorkerCount"
+    parameterType="string"
+    resultType="int">
+      SELECT
+          COUNT(distinct WPW.worker_mb_id) AS total_cnt
+      FROM work_place_worker WPW
+      INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+      INNER JOIN work_place WP ON WP.wp_id = WPW.wp_id
+      INNER JOIN sensor_log_recent SLR ON WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+      INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      WHERE WPW.wp_id = #{wpId}
+      AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+      AND SLR.in_out_type IN ( 0, 1 )
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+  </select>
+
+  <select id="findCurrentWorkerCountPerType"
+    parameterType="string"
+    resultType="map">
+    SELECT
+       COUNT(SLR.mb_id) AS total_cnt,
+       SUM( CASE WHEN SLR.in_out_type = 0  THEN 1 ELSE 0 END ) AS in_out_type_0,
+       SUM( CASE WHEN SLR.in_out_type = 1  THEN 1 ELSE 0 END ) AS in_out_type_1
+    FROM sensor_building_location SBL
+    INNER JOIN sensor_log_recent SLR ON SBL.si_idx = SLR.si_idx
+    INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+    INNER JOIN building BD ON SBL.building_no = BD.building_no
+    LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+    WHERE BD.wp_id = #{wpId}
+    AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+    AND SLR.in_out_type IN ( 0, 1 )
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+      <property name="aliasDeviceStatus" value="WDS"/>
+    </include>
+  </select>
+
+  <!-- 현장 내 빌딩 상황 정보 -->
+  <select id="findBuildingSituations"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.api.bls.dto.BuildingSituation">
+    SELECT
+      BD.wp_id
+      ,BD.building_no
+      ,BD.building_name
+      ,BD.area_type
+      ,BD.pos_x
+      ,BD.pos_y
+      ,BD.box_x
+      ,BD.box_y
+      ,BD.floor_upstair
+      ,BD.floor_downstair
+      ,BD.contain_roof
+      ,BD.contain_gangform
+      ,( select WP.wp_name FROM work_place WP where WP.wp_id = BD.wp_id ) as wp_name
+      ,(
+        select
+        case when count(ONE_BDF.floor) = 1 then MAX(ONE_BDF.floor) else null end
+        from building_floor ONE_BDF
+        where ONE_BDF.building_no = BD.building_no
+      ) as one_storied_floor
+      ,(
+        select
+        case when count(ONE_BDF.floor) = 1 then MAX(ONE_BDF.floor_name) else null end
+        from building_floor ONE_BDF
+        where ONE_BDF.building_no = BD.building_no
+      ) as one_storied_floor_name
+      ,IFNULL( RES.gangform_count, 0 ) as gangform_count
+      ,IFNULL( RES.normal_floor_count, 0 ) as normal_floor_count
+      ,IFNULL( RES.gangform_count, 0 ) +  IFNULL( RES.normal_floor_count, 0 ) AS worker_count
+    FROM  (
+      SELECT
+        SBL.building_no,
+        IFNULL(SUM( case when BDF.floor_type = 2000 then 1 else 0 end ), 0) as gangform_count,
+        IFNULL(SUM( case when BDF.floor_type != 2000 then 1 else 0 end ), 0) as normal_floor_count
+      FROM work_place WP
+      INNER JOIN building BD ON WP.wp_id = BD.wp_id
+      INNER JOIN building_floor BDF ON BD.building_no = BDF.building_no
+      INNER JOIN sensor_building_location SBL ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+      INNER JOIN sensor_log_recent SLR ON SBL.si_idx = SLR.si_idx
+      INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+      INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+      INNER JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+      WHERE WP.wp_id =  #{wpId}
+      AND SLR.slr_datetime >= DATE(NOW())
+      AND SLR.in_out_type IN (0, 1)
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+        <property name="aliasWp" value="WP"/>
+        <property name="aliasWpAndCoop" value="WPC"/>
+      </include>
+      group by SBL.building_no
+    ) RES
+    RIGHT JOIN building BD ON RES.building_no = BD.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    WHERE WP.wp_id =  #{wpId}
+  </select>
+
+  <!-- 빌딩 내 층 상황 정보 -->
+  <!--           AND SLR.in_out_type = 0 -->
+  <select id="findFloorSituations"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.api.bls.dto.FloorSituation">
+    select
+      BDF.building_no
+      ,BDF.floor
+      ,BDF.floor_name
+      ,BDF.cross_section_grid_x
+      ,BDF.cross_section_grid_y
+      ,BD.building_name
+      ,BD.pos_x
+      ,BD.pos_y
+      ,BD.floor_upstair
+      ,BD.floor_downstair
+      ,BD.cross_section_file_name
+      ,BD.cross_section_file_name_org
+      ,BD.cross_section_file_path
+      ,BD.cross_section_file_location
+      ,CASE
+        WHEN BDF.view_floor_file_name IS NOT NULL AND BDF.view_floor_file_name != '' THEN BDF.view_floor_file_name
+        ELSE BD.view_floor_file_name
+      END AS view_floor_file_name
+      ,CASE
+        WHEN BDF.view_floor_file_name_org IS NOT NULL AND BDF.view_floor_file_name_org != '' THEN BDF.view_floor_file_name_org
+        ELSE BD.view_floor_file_name_org
+      END AS view_floor_file_name_org
+      ,CASE
+        WHEN BDF.view_floor_file_path IS NOT NULL AND BDF.view_floor_file_path != '' THEN BDF.view_floor_file_path
+        ELSE BD.view_floor_file_path
+      END AS view_floor_file_path
+      ,CASE
+        WHEN BDF.view_floor_file_location IS NOT NULL AND BDF.view_floor_file_location != '' THEN BDF.view_floor_file_location
+        ELSE BD.view_floor_file_location
+      END AS view_floor_file_location
+      ,IFNULL((
+        SELECT COUNT(SLR.mb_id)
+        FROM sensor_building_location SBL
+        INNER JOIN sensor_log_recent SLR ON SBL.si_idx = SLR.si_idx
+        INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+        INNER JOIN g5_member G5M ON G5M.mb_id = SLR.mb_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+        WHERE SBL.building_no = BDF.building_no
+        AND SBL.floor = BDF.floor
+        AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+        AND SLR.in_out_type IN ( 0, 1 )
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+          <property name="aliasDeviceStatus" value="WDS"/>
+        </include>
+      ), 0) AS worker_count
+    from building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    WHERE BD.wp_id = #{wpId}
+    <if test='buildingNoList != null '>
+      AND BDF.building_no IN
+      <foreach collection="buildingNoList" item="item" index="index" separator="," open="(" close=")">
+        #{item,jdbcType=INTEGER}
+      </foreach>
+    </if>
+    order by BDF.building_no, BDF.floor DESC
+  </select>
+
+  <!--           AND SLR.in_out_type = 0 -->
+  <select id="findFloorAll"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.api.bls.dto.FloorSituation">
+    select
+      BDF.building_no
+      ,BDF.floor
+      ,BDF.floor_name
+      ,BDF.cross_section_grid_x
+      ,BDF.cross_section_grid_y
+      ,BD.building_name
+      ,BD.pos_x
+      ,BD.pos_y
+      ,BD.floor_upstair
+      ,BD.floor_downstair
+      ,CASE
+        WHEN BDF.view_floor_file_name IS NOT NULL AND BDF.view_floor_file_name != '' THEN BDF.view_floor_file_name
+        ELSE BD.view_floor_file_name
+      END AS view_floor_file_name
+      ,CASE
+        WHEN BDF.view_floor_file_name_org IS NOT NULL AND BDF.view_floor_file_name_org != '' THEN BDF.view_floor_file_name_org
+        ELSE BD.view_floor_file_name_org
+      END AS view_floor_file_name_org
+      ,CASE
+        WHEN BDF.view_floor_file_path IS NOT NULL AND BDF.view_floor_file_path != '' THEN BDF.view_floor_file_path
+        ELSE BD.view_floor_file_path
+      END AS view_floor_file_path
+      ,CASE
+        WHEN BDF.view_floor_file_location IS NOT NULL AND BDF.view_floor_file_location != '' THEN BDF.view_floor_file_location
+        ELSE BD.view_floor_file_location
+      END AS view_floor_file_location
+      ,IFNULL((
+        SELECT COUNT(SLR.mb_id)
+        FROM sensor_building_location SBL
+        INNER JOIN sensor_log_recent SLR ON SBL.si_idx = SLR.si_idx
+        INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+        INNER JOIN g5_member G5M ON G5M.mb_id = SLR.mb_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+        WHERE SBL.building_no = BDF.building_no
+        AND SBL.floor = BDF.floor
+        AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+        AND SLR.in_out_type IN ( 0, 1 )
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+          <property name="aliasDeviceStatus" value="WDS"/>
+        </include>
+      ), 0) AS worker_count
+    from building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    WHERE BDF.building_no = #{buildingNo}
+    <if test='floorList != null '>
+      AND BDF.floor IN
+      <foreach collection="floorList" item="item" index="index" separator="," open="(" close=")">
+        #{item,jdbcType=INTEGER}
+      </foreach>
+    </if>
+    order by BDF.building_no, BDF.floor DESC
+  </select>
+
+  <!-- 빌딩 내 층 상황 정보 -->
+  <!--           AND SLR.in_out_type = 0 -->
+  <select id="findGridSituations"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.api.bls.dto.FloorGridSituation">
+
+    select
+      SBL.building_no
+      ,SBL.floor
+      ,BDF.floor_name
+      ,SBL.si_idx
+      ,SBL.grid_x
+      ,SBL.grid_y
+      ,SI.si_code
+      ,SI.si_type
+      ,CASE
+        WHEN SD.default_color IS NOT NULL AND SD.default_color != '' THEN SD.default_color
+        WHEN SI.si_type = '위험지역' THEN '#ff7a14'
+        ELSE '#3eea17'
+      END AS default_color
+      ,CASE
+        WHEN SD.flash_color IS NOT NULL AND SD.flash_color != '' THEN SD.flash_color
+        WHEN SI.si_type = '위험지역' THEN '#ff0000'
+        ELSE '#3eea17'
+      END AS flash_color
+      ,IFNULL((
+        SELECT COUNT(SLR.mb_id)
+        FROM sensor_log_recent SLR
+        INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+        INNER JOIN g5_member G5M ON G5M.mb_id = SLR.mb_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+        WHERE SBL.si_idx = SLR.si_idx
+        AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+        AND SLR.in_out_type IN ( 0, 1 )
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+          <property name="aliasDeviceStatus" value="WDS"/>
+        </include>
+      ), 0) AS worker_count
+    from sensor_building_location SBL
+    INNER JOIN building_floor BDF ON SBL.building_no = BDF.building_no AND SBL.floor = BDF.floor
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    WHERE BD.wp_id = #{wpId}
+    AND SBL.building_no = #{buildingNo}
+    <if test='floorList != null '>
+      AND SBL.floor IN
+      <foreach collection="floorList" item="item" index="index" separator="," open="(" close=")">
+        #{item,jdbcType=INTEGER}
+      </foreach>
+    </if>
+    order by SBL.building_no, SBL.floor DESC, SBL.grid_x, SBL.grid_y
+  </select>
+
+  <select id="findCurrentWorkerListBySensor"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.api.bls.dto.WorkerBySensor">
+    SELECT
+      SI.si_idx
+     ,SI.si_code
+     ,SI.si_type
+     ,SI.si_place1
+     ,SI.si_place2
+     ,SI.si_push
+     ,SI.si_datetime
+     ,SI.uuid
+     ,SI.major
+     ,SI.minor
+     ,SLR.slr_datetime
+     ,SI.sd_idx
+     ,IFNULL( SD.sd_name, SI.sd_name ) AS sd_name
+     ,WP.wp_name
+     ,WPC.coop_mb_name
+     ,G5M.mb_id
+     ,G5M.mb_name
+     ,WP.cc_name
+     ,BD.building_name
+     ,SBL.floor
+     ,IFNULL(( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work) AS work_section_name_a
+     ,WPW.work_section_b
+     ,( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPW.work_section_b  ) AS work_section_name_b
+     ,IFNULL((
+        SELECT IC.icon_url
+        FROM work_equipment_info WEI
+        INNER JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+        INNER JOIN icon_code IC ON IC.icon_type = EC.icon_type
+        WHERE WEI.wp_id = SLR.wp_id
+        AND WEI.mb_id = SLR.mb_id
+        AND (
+          WEI.ope_type = 0
+          OR (
+            WEI.ope_type = 1 AND WEI.ope_start <![CDATA[<=]]> NOW() AND WEI.ope_end <![CDATA[>=]]> NOW()
+          )
+        )
+        ORDER BY WEI.upd_datetime DESC
+        LIMIT 1
+      ), '') AS equipment_icon_url
+    FROM sensor_log_recent SLR
+    INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+    INNER JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+    INNER JOIN building BD ON BDF.building_no = BD.building_no
+    INNER JOIN work_place WP ON WP.wp_id = SLR.wp_id
+    INNER JOIN sensor_info SI ON SI.si_idx = SLR.si_idx
+    INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+    INNER JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = SLR.mb_id
+    LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    WHERE SLR.si_idx = #{siIdx}
+    AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+    AND SLR.in_out_type IN ( 0, 1 )
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+      <property name="aliasDeviceStatus" value="WDS"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+    ORDER BY SLR.slr_datetime desc
+  </select>
+
+  <select id="findAllWorkerCountInWorkplaceSensor"
+          parameterType="string"
+          resultType="int">
+    SELECT
+      COUNT(*)
+    FROM sensor_log_recent SLR
+           INNER JOIN sensor_info SI ON SI.si_idx = SLR.si_idx
+           INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+           INNER JOIN work_place WP ON WP.wp_id = SLR.wp_id
+           LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+    WHERE SLR.wp_id = #{wpId}
+      AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+      AND SLR.in_out_type IN ( 0, 1 )
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+  </select>
+
+
+
+  <select id="findWorkplaceSituationPerFloor"
+          parameterType="string"
+          resultType="kr.co.hulan.aas.mvc.api.bls.dto.FloorSituationDto">
+    select
+      BD.building_no
+      ,BD.building_name
+      ,BD.area_type
+      ,BDF.floor
+      ,BDF.floor_name
+      ,BDF.floor_type
+      ,IFNULL((
+        SELECT COUNT(SLR.mb_id)
+        FROM sensor_building_location SBL
+        INNER JOIN sensor_log_recent SLR ON SBL.si_idx = SLR.si_idx
+        INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+        WHERE SBL.building_no = BDF.building_no
+        AND SBL.floor = BDF.floor
+        AND SLR.slr_datetime  >=  DATE(NOW())
+        AND SLR.in_out_type IN ( 0, 1 )
+        AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+          <property name="aliasDeviceStatus" value="WDS"/>
+        </include>
+      ), 0) AS worker_count
+    from building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    WHERE BD.wp_id = #{wpId}
+    order by BD.building_name, BDF.floor DESC
+
+  </select>
+
+  <!-- BLE 단면도 내 모니터링 현황 -->
+  <select id="findBuildingCrossSectionSituationForSmartMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.bls.dto.FloorSituations">
+    select
+      BD.building_no
+      ,BD.building_name
+      ,BDF.floor
+      ,BDF.floor_name
+      ,BDF.floor_type
+      ,BDF.cross_section_grid_x
+      ,BDF.cross_section_grid_y
+      ,BDF.box_x
+      ,BDF.box_y
+      ,BDF.activated
+      ,IFNULL( RES.worker_count, 0 ) as worker_count
+      ,IFNULL( RES.danger_worker_count, 0 ) as danger_worker_count
+    from building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    LEFT JOIN (
+      SELECT
+        BDF.building_no
+        ,BDF.floor
+        ,count( SLR.mb_id ) as worker_count
+        ,SUM( case when SI.si_type = '위험지역' then 1 else 0 end ) as danger_worker_count
+      FROM building_floor BDF
+      INNER JOIN building BD ON BD.building_no = BDF.building_no
+      INNER JOIN sensor_building_location SBL ON SBL.building_no = BDF.building_no AND SBL.floor = BDF.floor
+      INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+      INNER JOIN sensor_log_recent SLR ON SLR.si_idx = SI.si_idx
+      INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+      INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+      INNER JOIN work_place WP ON WP.wp_id = WPW.wp_id
+      INNER JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+      WHERE BD.wp_id = #{wpId}
+      AND BDF.building_no = #{buildingNo}
+      AND SLR.slr_datetime  >=  DATE(NOW())
+      AND SLR.in_out_type IN ( 0, 1 )
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+        <property name="aliasWp" value="WP"/>
+        <property name="aliasWpAndCoop" value="WPC"/>
+      </include>
+      group by BDF.building_no, BDF.floor
+    ) RES ON BDF.building_no = RES.building_no AND BDF.floor = RES.floor
+    WHERE BD.wp_id = #{wpId}
+    AND BDF.building_no = #{buildingNo}
+    order by BDF.building_no, BDF.floor DESC
+  </select>
+
+  <select id="findFloorSituationForSmartMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.bls.dto.FloorGridSituation">
+    select
+      SBL.building_no
+      ,SBL.floor
+      ,BDF.floor_name
+      ,SBL.si_idx
+      ,SBL.grid_x
+      ,SBL.grid_y
+      ,IFNULL( SD.sd_name, SI.sd_name ) as sd_name
+      ,SI.si_place1
+      ,SI.si_place2
+      ,SI.si_code
+      ,SI.si_type
+      ,CASE
+        WHEN SD.default_color IS NOT NULL AND SD.default_color != '' THEN SD.default_color
+        WHEN ST.default_color IS NOT NULL AND ST.default_color != '' THEN ST.default_color
+        WHEN SI.si_type = '위험지역' THEN '#ff7a14'
+        ELSE '#3eea17'
+      END AS default_color
+      ,CASE
+        WHEN SI.si_type = '위험지역' THEN '#ff0000'
+        WHEN SD.flash_color IS NOT NULL AND SD.flash_color != '' THEN SD.flash_color
+        WHEN ST.flash_color IS NOT NULL AND ST.flash_color != '' THEN ST.flash_color
+        ELSE '#3eea17'
+      END AS flash_color
+      ,CASE
+        WHEN ST.support_flash IS NOT NULL THEN ST.support_flash
+        WHEN SI.si_type = '위험지역' THEN 1
+        ELSE 0
+      END AS support_flash
+      ,IFNULL(RES.worker_count, 0) AS worker_count
+      ,IFNULL(RES.equipment_icon_urls, '') AS equipment_icon_urls
+      ,IFNULL(RES.marker, 0) AS marker
+    from sensor_building_location SBL
+    INNER JOIN building_floor BDF ON SBL.building_no = BDF.building_no AND SBL.floor = BDF.floor
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    LEFT JOIN sensor_type ST ON ST.si_type = SI.si_type
+    LEFT JOIN (
+      select
+        SBL.si_idx
+        ,COUNT(WPW.worker_mb_id) as worker_count
+        ,GROUP_CONCAT(distinct IC.icon_url separator '|') as equipment_icon_urls
+        ,<choose>
+          <when test='markerMbId != null and markerMbId != "" '>
+            case
+                when IFNULL( SUM( case when WPW.worker_mb_id = #{markerMbId} then 1 else 0 end ), 0 ) > 0 then 1
+                else 0
+            end AS marker
+          </when>
+          <otherwise>
+            0 AS marker
+          </otherwise>
+        </choose>
+      from sensor_building_location SBL
+      INNER JOIN sensor_info SI ON SI.si_idx = SBL.si_idx
+      INNER JOIN sensor_log_recent SLR ON SLR.si_idx = SBL.si_idx
+      INNER JOIN work_place_worker WPW ON WPW.wp_id= SLR.wp_id AND WPW.worker_mb_id = SLR.mb_id
+      INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+      INNER JOIN work_place WP ON WP.wp_id = WPW.wp_id
+      INNER JOIN worker_device_status WDS ON WDS.mb_id = WPW.worker_mb_id
+      LEFT JOIN work_equipment_info WEI ON WEI.wp_id = WPW.wp_id AND WEI.mb_id = WPW.worker_mb_id
+                                        AND (
+                                          WEI.ope_type = 0
+                                          OR
+                                          (
+                                            WEI.ope_type = 1 AND WEI.ope_start <![CDATA[<=]]> NOW() AND WEI.ope_end <![CDATA[>=]]> NOW()
+                                          )
+                                        )
+      LEFT JOIN equipment_code EC ON EC.equipment_type = WEI.equipment_type
+      LEFT JOIN icon_code IC ON IC.icon_type = EC.icon_type
+      WHERE SBL.building_no = #{buildingNo}
+      AND SBL.floor = #{floor}
+      AND SI.wp_id = #{wpId}
+      AND SLR.slr_datetime  >= DATE(NOW())
+      AND SLR.in_out_type IN ( 0, 1 )
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+      <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+        <property name="aliasWp" value="WP"/>
+        <property name="aliasWpAndCoop" value="WPC"/>
+      </include>
+      group by SBL.si_idx
+    ) RES ON RES.si_idx = SI.si_idx
+    WHERE BD.wp_id = #{wpId}
+    AND SBL.building_no = #{buildingNo}
+    AND SBL.floor = #{floor}
+    order by SBL.building_no, SBL.floor DESC, SBL.grid_x, SBL.grid_y
+  </select>
+
+
+  <select id="findDetectedUserSensorLocation"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.SensorBuildingLocationDto">
+      SELECT
+        SBL.si_idx
+        ,SBL.building_no
+        ,SBL.floor
+        ,SBL.grid_x
+        ,SBL.grid_y
+        ,SBL.create_date
+        ,SBL.creator
+        ,SBL.update_date
+        ,SBL.updater
+        ,SI.si_code
+        ,SI.si_type
+        ,SI.si_place1
+        ,SI.si_place2
+        ,BD.building_name
+        ,BD.wp_id
+        ,BDF.floor_name
+        ,WP.wp_id
+        ,WP.wp_name
+        ,WP.cc_name
+        ,(
+          select
+            case when count(ONE_BDF.floor) = 1 then MAX(ONE_BDF.floor) else null end
+          from building_floor ONE_BDF
+          where ONE_BDF.building_no = BD.building_no
+        ) as one_storied_floor
+      FROM sensor_log_recent SLR
+      INNER JOIN sensor_info SI ON SI.si_idx = SLR.si_idx
+      INNER JOIN work_place WP ON WP.wp_id = SLR.wp_id
+      INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+      INNER JOIN g5_member G5M ON G5M.mb_id = SLR.mb_id
+      INNER JOIN sensor_building_location SBL ON SBL.si_idx = SI.si_idx
+      INNER JOIN building_floor BDF ON SBL.building_no = BDF.building_no AND SBL.floor = BDF.floor
+      INNER JOIN building BD ON BD.building_no = BDF.building_no
+      LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+      WHERE SLR.mb_id = #{mbId}
+      AND SLR.wp_id = #{wpId}
+      AND SBL.si_idx = SLR.si_idx
+      AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+      AND SLR.in_out_type IN ( 0, 1 )
+      AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+        <property name="aliasDeviceStatus" value="WDS"/>
+      </include>
+      LIMIT 1
+  </select>
+
+  <select id="searchBleUser"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.bls.controller.response.BleUserVo">
+    SELECT
+     WP.wp_id
+     ,WP.wp_name
+     ,IFNULL( COOP_G5M.mb_id, WPC.coop_mb_id ) AS coop_mb_id
+     ,IFNULL( COOP_G5M.mb_name, WPC.coop_mb_name ) AS coop_mb_name
+     ,G5M.mb_id
+     ,G5M.mb_name
+     ,BD.building_no
+     ,BD.building_name
+     ,BDF.floor
+     ,BDF.floor_name
+     ,SI.si_idx
+     ,IFNULL( SD.sd_name, SI.sd_name ) AS sd_name
+     ,SI.si_place1
+     ,SI.si_place2
+     ,SLR.slr_datetime
+    FROM sensor_log_recent SLR
+    INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+    INNER JOIN building_floor BDF ON BDF.building_no = SBL.building_no AND BDF.floor = SBL.floor
+    INNER JOIN building BD ON BDF.building_no = BD.building_no
+    INNER JOIN sensor_info SI ON SI.si_idx = SLR.si_idx
+    INNER JOIN work_place_worker WPW ON WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = SLR.mb_id
+    INNER JOIN work_place WP ON WP.wp_id = SLR.wp_id
+    LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+    LEFT JOIN work_place_coop WPC ON WPC.coop_mb_id = WPW.coop_mb_id AND WPC.wp_id = WPW.wp_id
+    LEFT JOIN g5_member COOP_G5M ON COOP_G5M.mb_id = WPC.coop_mb_id
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    WHERE SLR.wp_id = #{wpId}
+    <if test='mbName != null and mbName != "" ' >
+      AND G5M.mb_name like concat('%', #{mbName}, '%')
+    </if>
+    AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+    AND SLR.in_out_type IN ( 0, 1 )
+    AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+      <property name="aliasDeviceStatus" value="WDS"/>
+    </include>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+      <property name="aliasWp" value="WP"/>
+      <property name="aliasWpAndCoop" value="WPC"/>
+    </include>
+    ORDER BY SLR.slr_datetime desc
+  </select>
+
+
+  <!--
+  <select id="findAttendantSituationListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantSituationVo">
+    SELECT
+      WPC.wp_id,
+      WPC.wp_name,
+      WPC.coop_mb_id,
+      WPC.coop_mb_name,
+      WPC.work_section_a,
+      WPC.work_section_name_a,
+      IFNULL((
+        select count(distinct WPW.worker_mb_id) as cnt
+        FROM work_place_worker WPW
+        where WPW.wpw_out = 0
+        AND WPW.wp_id = WPC.wp_id
+        AND WPW.coop_mb_id = WPC.coop_mb_id
+        AND EXISTS(
+          select 1
+          from sensor_log_inout SLI
+          where SLI.wp_id = WPW.wp_id
+          and SLI.coop_mb_id = WPW.coop_mb_id
+          and SLI.mb_id = WPW.worker_mb_id
+          AND SLI.si_type = '출입용'
+          AND SLI.sli_in_datetime >= DATE(NOW())
+          AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+          LIMIT 1
+        )
+      ), 0) AS worker_today_count,
+      IFNULL((
+        select count(distinct WPW.worker_mb_id) as total_cnt
+        FROM work_place_worker WPW
+        INNER JOIN sensor_log_recent SLR ON WPW.worker_mb_id = SLR.mb_id AND WPW.coop_mb_id = SLR.coop_mb_id AND WPW.wp_id = SLR.wp_id
+        INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+        INNER JOIN building BD ON SBL.building_no = BD.building_no
+        LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+        WHERE WPW.wpw_out = 0
+        AND WPW.wp_id = WPC.wp_id
+        AND WPW.coop_mb_id = WPC.coop_mb_id
+        AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+        AND (
+          WDS.upt_datetime IS NULL
+          OR
+          (
+            WDS.upt_datetime IS NOT NULL
+            AND WDS.upt_datetime <![CDATA[ > ]]> date_sub( NOW(), interval 22 minute )
+            AND WDS.ble_check = 1
+            AND WDS.loc_check = 1
+          )
+        )
+        AND SLR.in_out_type IN ( 0, 1 )
+      ), 0) AS worker_current_count
+    FROM (
+      SELECT
+        WPC.wp_id,
+        WPC.wp_name,
+        WPC.coop_mb_id,
+        IFNULL( G5M.mb_name, WPC.coop_mb_name) AS coop_mb_name,
+        WPC.work_section_a,
+        IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a
+      FROM work_place_coop WPC
+      INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+      LEFT JOIN g5_member G5M ON G5M.mb_id = WPC.coop_mb_id
+      WHERE 'x' = 'x'
+      <if test='wpId != null and wpId != "" '>
+        AND WPC.wp_id = #{wpId}
+      </if>
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPC.coop_mb_id = #{coopMbId}
+      </if>
+      ORDER BY WPC.wpc_datetime DESC
+      <if test="startRow != null and pageSize != null ">
+        LIMIT #{startRow}, #{pageSize}
+      </if>
+    ) WPC
+  </select>
+  -->
+  
+  
+  <select id="findAttendantSituationListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantSituationVo">
+    select
+      WPC.wp_id,
+      WP.wp_name,
+      WPC.coop_mb_id,
+      G5M_COOP.mb_name as coop_mb_name,
+      WPC.work_section_a,
+      IFNULL( ( SELECT WS.section_name from work_section WS where WS.section_cd = WPC.work_section_a ), WPC.wpc_work ) AS work_section_name_a,
+      IFNULL( WPW.total_worker, 0 ) as worker_today_count ,
+      IFNULL( WPW.current_worker, 0 ) as worker_current_count
+    from (
+      select
+        WPW.wp_id,
+        WPW.coop_mb_id,
+        count(WPW.worker_mb_id) as total_worker,
+        sum( IFNULL((
+          SELECT 1
+          FROM sensor_log_recent SLR
+          INNER JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+          LEFT JOIN worker_device_status WDS ON WDS.mb_id = SLR.mb_id
+          WHERE WPW.worker_mb_id = SLR.mb_id AND WPW.wp_id = SLR.wp_id
+          AND SLR.slr_datetime  >=  DATE(NOW())
+          AND SLR.in_out_type IN ( 0, 1 )
+          AND <include refid="kr.co.hulan.aas.mvc.dao.mapper.WorkerDeviceStatusDao.WhereDeviceActive">
+            <property name="aliasDeviceStatus" value="WDS"/>
+          </include>
+          LIMIT 1
+        ), 0 )) as current_worker
+      from work_place_worker WPW
+      WHERE WPW.wpw_out = 0
+      AND WPW.wp_id = #{wpId}
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND WPW.coop_mb_id = #{coopMbId}
+      </if>
+      AND EXISTS(
+      select 1
+        from sensor_log_inout SLI
+        where SLI.wp_id = WPW.wp_id
+        and SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime  <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        LIMIT 1
+      )
+      group by WPW.wp_id, WPW.coop_mb_id
+    ) WPW RIGHT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    INNER JOIN work_place WP ON WP.wp_id = WPC.wp_id
+    INNER JOIN g5_member G5M_COOP ON G5M_COOP.mb_id = WPC.coop_mb_id
+    WHERE WPC.wp_id = #{wpId}
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPC.coop_mb_id = #{coopMbId}
+    </if>
+    ORDER BY G5M_COOP.mb_name
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <select id="findAttendantListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    SELECT
+    WP.wp_id
+    ,WP.wp_name
+    ,WPW.coop_mb_id
+    ,G5M_COOP.mb_name as coop_mb_name
+    ,WPW.worker_mb_id
+    ,G5M.mb_name AS worker_mb_name
+    ,WPW.work_section_b
+    ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPC.work_section_a), '' ) as work_section_name_a
+    ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPW.work_section_b), '' ) as work_section_name_b
+    ,WP.cc_id
+    ,WP.cc_name
+    ,SLI.sli_in_datetime AS measure_time
+    FROM (
+      select
+      SLI.wp_id
+      ,SLI.coop_mb_id
+      ,SLI.mb_id
+      ,MIN(sli_in_datetime) AS sli_in_datetime
+      from sensor_log_inout SLI
+      where SLI.wp_id = #{wpId}
+      <if test='coopMbId != null and coopMbId != "" '>
+        AND SLI.coop_mb_id = #{coopMbId}
+      </if>
+      AND SLI.si_type = '출입용'
+      and SLI.sli_in_datetime between DATE( NOW() ) and STR_TO_DATE( concat( DATE_FORMAT( NOW(), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+      group by SLI.wp_id, SLI.coop_mb_id, SLI.mb_id
+    ) SLI
+    INNER JOIN work_place_worker WPW ON SLI.wp_id = WPW.wp_id AND SLI.coop_mb_id = WPW.coop_mb_id AND SLI.mb_id = WPW.worker_mb_id
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    INNER JOIN g5_member G5M_COOP ON G5M_COOP.mb_id = WPW.worker_mb_id
+    LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    WHERE 'x' = 'x'
+    <choose>
+      <when test='workSectionB != null and workSectionB != "" '>
+        AND WPW.work_section_b = #{workSectionB}
+      </when>
+      <when test='workSectionA != null and workSectionA != "" '>
+        AND EXISTS (
+          SELECT 1
+          FROM work_section PWS
+          WHERE PWS.section_cd = WPW.work_section_b
+          AND PWS.parent_section_cd = #{workSectionA}
+          LIMIT 1
+        )
+      </when>
+    </choose>
+    ORDER BY SLI.sli_in_datetime DESC, WPW.worker_mb_name ASC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <select id="findCurrentAttendantListForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    SELECT
+    WPW.wp_id
+    ,WPW.wp_name
+    ,WPW.coop_mb_id
+    ,WPW.coop_mb_name
+    ,WPW.worker_mb_id
+    ,WPW.work_section_b
+    ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPW.work_section_b), '' ) as work_section_name_b
+    ,G5M.mb_name AS worker_mb_name
+    ,WP.cc_id
+    ,WP.cc_name
+    ,IFNULL(CONCAT( BD.building_name, ' ', BDF.floor_name ), '') AS current_location
+    ,SD.sd_name
+    ,SI.si_place1
+    ,SI.si_place2
+    ,SLR.slr_datetime AS measure_time
+    FROM work_place_worker WPW
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    LEFT JOIN sensor_log_recent SLR ON SLR.wp_id = WPW.wp_id AND SLR.coop_mb_id = WPW.coop_mb_id AND SLR.mb_id = WPW.worker_mb_id AND SLR.slr_datetime <![CDATA[ >= ]]>  DATE(NOW())
+    LEFT JOIN sensor_info SI ON SI.si_idx = SLR.si_idx
+    LEFT JOIN sensor_district SD ON SD.sd_idx = SI.sd_idx
+    LEFT JOIN sensor_building_location SBL ON SBL.si_idx = SLR.si_idx
+    LEFT JOIN building_floor BDF ON SBL.building_no = BDF.building_no AND SBL.floor = BDF.floor
+    LEFT JOIN building BD ON SBL.building_no = BD.building_no
+    WHERE WPW.wp_id = #{wpId}
+    <if test='coopMbId != null and coopMbId != "" '>
+      AND WPW.coop_mb_id = #{coopMbId}
+    </if>
+    AND EXISTS(
+    select 1
+    from sensor_log_inout SLI
+    where SLI.wp_id = WPW.wp_id
+    and SLI.coop_mb_id = WPW.coop_mb_id
+    and SLI.mb_id = WPW.worker_mb_id
+    AND SLI.si_type = '출입용'
+    and SLI.sli_in_datetime between DATE( NOW() ) and STR_TO_DATE( concat( DATE_FORMAT( NOW(), '%Y-%m-%d'), ' 23:59:59'), '%Y-%m-%d %H:%i:%s')
+    LIMIT 1
+    )
+    ORDER BY WPW.worker_mb_name DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  
+  <select id="findCoopAttendantsForMonitoring"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.monitor.controller.response.AttendantVo">
+    SELECT
+      WPW.wp_id
+      ,WP.wp_name
+      ,WPW.coop_mb_id
+      ,G5M_COOP.mb_name as coop_mb_name
+      ,WPW.worker_mb_id
+      ,G5M.mb_name AS worker_mb_name
+      ,WPC.work_section_a
+      ,WPW.work_section_b
+      ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPC.work_section_a), '' ) as work_section_name_a
+      ,IFNULL(( SELECT WS.section_name FROM work_section WS WHERE WS.section_cd = WPW.work_section_b), '' ) as work_section_name_b
+      ,(
+        select
+        MIN(sli_in_datetime)
+        from sensor_log_inout SLI
+        where SLI.wp_id = WPW.wp_id
+        AND SLI.mb_id = WPW.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+      ) as measure_time
+    FROM work_place_worker WPW
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    INNER JOIN g5_member G5M ON G5M.mb_id = WPW.worker_mb_id
+    LEFT JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+    LEFT JOIN g5_member G5M_COOP ON G5M.mb_id = WPC.coop_mb_id
+    WHERE WPW.wp_id = #{wpId}
+    AND WPW.coop_mb_id = #{coopMbId}
+    AND EXISTS(
+      select 1
+      from sensor_log_inout SLI
+      where SLI.wp_id = WPW.wp_id
+      and SLI.mb_id = WPW.worker_mb_id
+      AND SLI.si_type = '출입용'
+      AND SLI.sli_in_datetime >= DATE(NOW())
+      AND SLI.sli_in_datetime <![CDATA[ < ]]>  DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+      LIMIT 1
+    )
+    ORDER BY WPW.worker_mb_name DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  
+</mapper>
+

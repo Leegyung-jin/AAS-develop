@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.ImageAnalyticInfoDao">
+
+  <!--  -->
+  <select id="findList"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.model.dto.ImageAnalyticInfoDto">
+    SELECT
+      IAI.wp_id
+      ,IAI.mac_address
+      ,IAI.event_type
+      ,IAI.event_status
+      ,IAI.file_path
+      ,IAI.file_name
+      ,IAI.org_file_name
+      ,IAI.event_datetime
+      ,IAI.event_view
+    from image_analytic_info IAI
+    WHERE IAI.wp_id = #{wpId}
+    AND IAI.event_status = 1
+    AND IAI.event_view = 1
+    ORDER BY event_datetime DESC
+  </select>
+
+</mapper>

@@ -1,0 +1,14 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="aas:war">
+    <output-path>$PROJECT_DIR$/AAS-develop/target</output-path>
+    <properties id="maven-jee-properties">
+      <options>
+        <module>aas</module>
+        <packaging>war</packaging>
+      </options>
+    </properties>
+    <root id="archive" name="aas.war">
+      <element id="artifact" artifact-name="aas:war exploded" />
+    </root>
+  </artifact>
+</component>

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.OfficeWorkplaceGroupDao">
+  
+  <resultMap id="officeWorkplaceGroupDetailResultMap" type="kr.co.hulan.aas.mvc.api.orderoffice.vo.OfficeWorkplaceGroupVo" autoMapping="true">
+    <id property="wpGrpNo" column="wp_grp_no"/>
+    <collection property="managerList"
+      ofType="kr.co.hulan.aas.mvc.api.member.dto.OfficeGroupManagerDto"
+      column="wp_grp_no"
+      select="findOfficeWorkplaceMangerListByKey"
+      autoMapping="true"
+    />
+  </resultMap>
+  
+  <!-- 발주사 현장그룹 목록 -->
+  <select id="findListByCondition"
+    parameterType="map"
+    resultType="kr.co.hulan.aas.mvc.api.orderoffice.vo.OfficeWorkplaceGroupVo">
+    SELECT
+      OFWG.wp_grp_no
+      ,OFWG.office_no
+      ,OROF.office_name
+      ,OFWG.office_grp_name
+      ,IFNULL((
+        select count(WP.wp_id)
+        from work_place WP
+        where WP.office_no = OFWG.office_no
+      ), 0) as workplace_count
+      ,OFWG.create_date
+      ,OFWG.creator
+      ,OFWG.update_date
+      ,OFWG.updater
+    FROM office_workplace_grp OFWG
+    INNER JOIN ordering_office OROF ON OROF.office_no = OFWG.office_no
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        OFWG.office_grp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='officeName != null and officeName != "" '>
+      AND OROF.office_name like concat( '%', #{officeName} ,'%')
+    </if>
+    <if test='officeGrpName != null and officeGrpName != "" '>
+      AND OFWG.office_grp_name like concat( '%', #{officeGrpName} ,'%')
+    </if>
+    ORDER BY OFWG.create_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+  
+  <!-- 발주사 현장그룹 목록 수 -->
+  <select id="countListByCondition"
+    parameterType="map"
+    resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM office_workplace_grp OFWG
+    INNER JOIN ordering_office OROF ON OROF.office_no = OFWG.office_no
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      OROF.office_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      OFWG.office_grp_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='officeName != null and officeName != "" '>
+      AND OROF.office_name like concat( '%', #{officeName} ,'%')
+    </if>
+    <if test='officeGrpName != null and officeGrpName != "" '>
+      AND OFWG.office_grp_name like concat( '%', #{officeGrpName} ,'%')
+    </if>
+  </select>
+  
+  <!-- 발주사 현장그릅 정보 -->
+  <select id="findInfo"
+    parameterType="long"
+    resultMap="officeWorkplaceGroupDetailResultMap">
+    SELECT
+      OFWG.wp_grp_no
+      ,OFWG.office_no
+      ,OROF.office_name
+      ,OFWG.office_grp_name
+      ,OFWG.create_date
+      ,OFWG.creator
+      ,OFWG.update_date
+      ,OFWG.updater
+    FROM office_workplace_grp OFWG
+    INNER JOIN ordering_office OROF ON OROF.office_no = OFWG.office_no
+    WHERE OFWG.wp_grp_no = #{wpGrpNo}
+  </select>
+  
+  
+  <select id="findOfficeWorkplaceMangerListByKey"
+    parameterType="long"
+    resultType="kr.co.hulan.aas.mvc.api.member.dto.OfficeGroupManagerDto">
+    SELECT
+      G5M.mb_no
+         ,G5M.mb_id
+         ,G5M.mb_name AS name
+         ,G5M.mb_tel AS telephone
+         ,G5M.mb_1 AS member_ship_no
+         ,G5M.mb_datetime AS regist_date
+         ,G5M.mb_memo
+         ,G5M.mb_leave_date AS withdraw_date
+         ,G5M.mb_intercept_date AS block_date
+         ,OROF.office_no
+         ,OROF.office_name
+    FROM office_workplace_manager OWM
+    INNER JOIN office_workplace_grp OFWG ON OFWG.wp_grp_no = OWM.wp_grp_no
+    INNER JOIN ordering_office OROF ON OROF.office_no = OFWG.office_no
+    INNER JOIN g5_member G5M ON G5M.mb_id = OWM.mb_id
+    WHERE OWM.wp_grp_no = #{wpGrpNo}
+  </select>
+
+</mapper>

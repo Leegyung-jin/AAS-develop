@@ -1,0 +1,38 @@
+####################
+## 계정 추가
+####################
+## kafka_jass.conf 및 zookeeper_jaas.conf 에 규칙에 따라 계정 추가
+
+####################
+## 권한 및 Topic 설정
+####################
+
+## Topic 설정
+kafka-topics.sh --create --zookeeper localhost:2181  --partitions 1 --replication-factor 1  --topic "kunsulup.workplace-worker.fact.entry-exit.0"
+kafka-topics.sh --create --zookeeper localhost:2181  --partitions 1 --replication-factor 1  --topic "kunsulup.imos-notice.fact.changed.0"
+kafka-topics.sh --create --zookeeper localhost:2181  --partitions 1 --replication-factor 1  --topic "kunsulup.nvr.fact.changed.0"
+kafka-topics.sh --create --zookeeper localhost:2181  --partitions 1 --replication-factor 1  --topic "kunsulup.nvr-ch.fact.changed.0"
+kafka-topics.sh --create --zookeeper localhost:2181  --partitions 1 --replication-factor 1  --topic "kunsulup.nvr-ch-evt.fact.changed.0"
+
+## Producer
+kafka-acls.sh --add --producer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:producer --topic "local-topic"
+kafka-acls.sh --add --producer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:aas --topic "local-topic" --resource-pattern-type PREFIXED
+kafka-acls.sh --add --producer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:kaa --topic "kunsulup.workplace-worker.fact.entry-exit.0"
+kafka-acls.sh --add --producer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:aas --topic "kunsulup.imos-notice.fact.changed.0"
+kafka-acls.sh --add --producer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:aas --topic "kunsulup.nvr.fact.changed.0"
+kafka-acls.sh --add --producer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:eis --topic "kunsulup.nvr-ch.fact.changed.0"
+kafka-acls.sh --add --producer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:eis --topic "kunsulup.nvr-ch-evt.fact.changed.0"
+
+## Consumer
+kafka-acls.sh --add --consumer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:consumer --topic "local-topic" --group "local-group"
+kafka-acls.sh --add --consumer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:entergate --topic "local-topic" --group "EGA" --resource-pattern-type PREFIXED
+kafka-acls.sh --add --consumer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:entergate --topic "kunsulup.workplace-worker.fact.entry-exit.0" --group "EGA"
+kafka-acls.sh --add --consumer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:ima --topic "kunsulup.imos-notice.fact.changed.0" --group "IMA"
+kafka-acls.sh --add --consumer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:eis --topic "kunsulup.nvr.fact.changed.0"
+kafka-acls.sh --add --consumer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:aas --topic "kunsulup.nvr-ch.fact.changed.0" --group "AAS"
+kafka-acls.sh --add --consumer --authorizer-properties "zookeeper.connect=localhost:2181" --allow-principal User:ima --topic "kunsulup.nvr-ch-evt.fact.changed.0" --group "IMA"
+
+
+####################
+## NextApply
+####################

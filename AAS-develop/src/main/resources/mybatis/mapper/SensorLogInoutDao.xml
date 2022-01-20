@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.SensorLogInoutDao">
+  
+  <!--  ************************************************************************
+  출근 근로자 필터링 조건절
+  <include refid="kr.co.hulan.aas.mvc.dao.mapper.SensorLogInoutDao.AndAttendanceWorker">
+    <property name="aliasWorkplaceWorker" value="WPW"/>
+  </include>
+  ************************************************************************  -->
+    <sql id="AndAttendanceWorker">
+      AND EXISTS(
+        select 1
+        from sensor_log_inout SLI
+        where SLI.wp_id = ${aliasWorkplaceWorker}.wp_id
+        and SLI.mb_id = ${aliasWorkplaceWorker}.worker_mb_id
+        AND SLI.si_type = '출입용'
+        AND SLI.sli_in_datetime >= DATE(NOW())
+        AND SLI.sli_in_datetime <![CDATA[<]]> DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        LIMIT 1
+      )
+    </sql>
+    
+    <!-- 근태관리 > 근로자별현황 -->
+    <select id="findSafetySituationListByCondition"
+            parameterType="map"
+            resultType="kr.co.hulan.aas.mvc.model.dto.SensorLogInoutDto">
+        SELECT
+            STR_TO_DATE(ATDB.working_day, '%Y%m%d' ) AS sli_datetime
+            ,ATDB.wp_id
+            ,ATDB.wp_name
+            ,ATDB.mb_id
+            ,ATDB.mb_name
+            ,ATDB.coop_mb_id
+            ,ATDB.coop_mb_name
+            ,ATDB.work_in_date as sli_in_datetime
+            ,IFNULL((
+                select max(SLI2.sli_out_datetime)
+                from sensor_log_inout SLI2
+                where SLI2.wp_id = ATDB.wp_id
+                AND SLI2.mb_id = ATDB.mb_id
+                AND SLI2.sli_in_datetime >= DATE(ATDB.working_day)
+                AND SLI2.sli_in_datetime <![CDATA[<]]> DATE_ADD(DATE(ATDB.working_day), interval 1 day)
+                AND SLI2.sli_out_datetime is not null
+            ), IFNULL( ATDB.work_out_date, ATDB.work_in_date) ) AS sli_out_datetime
+            ,ATDB.work_section_name_a
+            ,ATDB.work_section_b
+            ,ATDB.work_section_name_b
+            ,(
+                select SLI2.sli_in_datetime
+                from sensor_log_inout SLI2
+                inner join work_place WP ON SLI2.wp_id = WP.wp_id
+                where SLI2.wp_id = ATDB.wp_id
+                and SLI2.mb_id = ATDB.mb_id
+                and SLI2.si_type = '안전조회'
+                <if test='coopMbId != null and coopMbId != "" '>
+                    AND SLI2.coop_mb_id = #{coopMbId}
+                </if>
+                AND SLI2.sli_in_datetime >= DATE(ATDB.working_day)
+                AND SLI2.sli_in_datetime <![CDATA[<]]> DATE_ADD(DATE(ATDB.working_day), interval 1 day)
+                AND TIME(SLI2.sli_in_datetime) <![CDATA[<]]> WP.wp_edutime_end
+                AND TIME(ifnull(SLI2.sli_out_datetime, NOW()) ) <![CDATA[ > ]]>  WP.wp_edutime_start
+                LIMIT 1
+            ) AS safe_datetime
+            , (
+                select count(*)
+                from attendance_book ATDB2
+                where ATDB2.wp_id = ATDB.wp_id
+                and ATDB2.mb_id = ATDB.mb_id
+                <if test='coopMbId != null and coopMbId != "" '>
+                    AND ATDB2.coop_mb_id = #{coopMbId}
+                </if>
+                <choose>
+                    <when test='startDate != null and endDate != null  '>
+                        AND ATDB2.working_day >= DATE_FORMAT( DATE_ADD(DATE_ADD(LAST_DAY(#{startDate}), INTERVAL 1 DAY), INTERVAL - 1 MONTH) , '%Y%m%d')
+                        AND ATDB2.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(#{endDate}), INTERVAL 1 DAY) , '%Y%m%d')
+                    </when>
+                    <otherwise>
+                        AND ATDB2.working_day >= DATE_FORMAT( DATE_ADD(DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY), INTERVAL - 1 MONTH) , '%Y%m%d')
+                        AND ATDB2.working_day <![CDATA[<]]> DATE_FORMAT( DATE_ADD(LAST_DAY(NOW()), INTERVAL 1 DAY) , '%Y%m%d')
+                    </otherwise>
+                </choose>
+            ) AS worker_month_count
+            ,(
+                select count(*)
+                from attendance_book ATDB2
+                where ATDB2.wp_id = ATDB.wp_id
+                and ATDB2.mb_id = ATDB.mb_id
+                <if test='coopMbId != null and coopMbId != "" '>
+                    AND ATDB2.coop_mb_id = #{coopMbId}
+                </if>
+                <if test='startDate != null and endDate != null '>
+                    AND ATDB2.working_day >= DATE_FORMAT(#{startDate}, '%Y%m%d')
+                    AND ATDB2.working_day <![CDATA[<=]]>  DATE_FORMAT(#{endDate}, '%Y%m%d')
+                </if>
+            ) AS worker_total_count
+        FROM (
+            SELECT
+                ATDB.working_day
+                ,ATDB.wp_id
+                ,WP.wp_name
+                ,ATDB.mb_id
+                ,WPW.worker_mb_name as mb_name
+                ,WPW.coop_mb_id
+                ,WPW.coop_mb_name
+                ,IFNULL( (SELECT WSA.section_name FROM work_section WSA WHERE WSA.section_cd = WS.parent_section_cd  ), '') AS work_section_name_a
+                ,WPW.work_section_b
+                ,IFNULL( WS.section_name, '' ) AS work_section_name_b
+                ,ATDB.work_in_date
+                ,ATDB.work_out_date
+                ,IFNULL((
+                   select max(SLI.sli_out_datetime)
+                   from sensor_log_inout SLI
+                   where SLI.wp_id = ATDB.wp_id
+                   AND SLI.mb_id = ATDB.mb_id
+                   AND SLI.sli_in_datetime >= DATE(ATDB.working_day)
+                   AND SLI.sli_in_datetime <![CDATA[<]]> DATE_ADD(DATE(ATDB.working_day), interval 1 day)
+                   AND SLI.sli_out_datetime is not null
+                ), IFNULL( ATDB.work_out_date, ATDB.work_in_date) ) AS sli_out_datetime
+            FROM attendance_book ATDB
+            INNER JOIN work_place_worker WPW ON WPW.wp_id = ATDB.wp_id   AND WPW.coop_mb_id = ATDB.coop_mb_id AND WPW.worker_mb_id = ATDB.mb_id
+            INNER JOIN work_place_coop WPC ON WPC.wp_id = ATDB.wp_id AND WPC.coop_mb_id = ATDB.coop_mb_id
+            INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+            INNER JOIN work_place WP ON WP.wp_id = ATDB.wp_id
+            LEFT JOIN work_section WS ON WS.section_cd = WPW.work_section_b
+            WHERE 'x' = 'x'
+            <if test='COMPLEX != null and COMPLEX != "" '>
+                AND (
+                    CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+                    OR
+                    WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+                    OR
+                    WPW.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+                    OR
+                    WPW.worker_mb_id like concat( '%', #{COMPLEX} ,'%')
+                    OR
+                    WPW.worker_mb_name like concat( '%', #{COMPLEX} ,'%')
+                    OR
+                    WS.section_name like concat( '%', #{COMPLEX} ,'%')
+                )
+            </if>
+            <if test='workSectionNameB != null and workSectionNameB != "" '>
+                AND WS.section_name like concat( '%', #{workSectionNameB} ,'%')
+            </if>
+            <if test='ccName != null and ccName != "" '>
+                AND CC.cc_name like concat( '%', #{ccName} ,'%')
+            </if>
+            <if test='wpName != null and wpName != "" '>
+                AND WPW.wp_name like concat( '%', #{wpName} ,'%')
+            </if>
+            <if test='coopMbName != null and coopMbName != "" '>
+                AND WPW.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+            </if>
+            <if test='mbId != null and mbId != "" '>
+                AND WPW.worker_mb_id like concat( '%', #{mbId} ,'%')
+            </if>
+            <if test='mbName != null and mbName != "" '>
+                AND WPW.worker_mb_name like concat( '%', #{mbName} ,'%')
+            </if>
+            <if test='startDate != null  '>
+                AND ATDB.working_day >= DATE_FORMAT(#{startDate}, '%Y%m%d')
+            </if>
+            <if test='endDate != null  '>
+                AND ATDB.working_day <![CDATA[<=]]> DATE_FORMAT(#{endDate}, '%Y%m%d')
+            </if>
+            <if test='ccId != null and ccId != "" '>
+                AND CC.cc_id = #{ccId}
+            </if>
+            <if test='wpId != null and wpId != "" '>
+                AND WPW.wp_id = #{wpId}
+            </if>
+            <if test='coopMbId != null and coopMbId != "" '>
+                AND WPW.coop_mb_id = #{coopMbId}
+            </if>
+            <if test='workSectionB != null and workSectionB != "" '>
+                AND WPW.work_section_b = #{workSectionB}
+            </if>
+            <if test='workSectionA != null and workSectionA != "" '>
+                AND WS.parent_section_cd = #{workSectionA}
+            </if>
+            <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+                <property name="aliasWp" value="WP"/>
+                <property name="aliasWpAndCoop" value="WPC"/>
+            </include>
+            ORDER BY ATDB.working_day DESC
+            <if test="startRow != null and pageSize != null ">
+                LIMIT #{startRow}, #{pageSize}
+            </if>
+        ) ATDB
+        ORDER BY ATDB.working_day desc
+    </select>
+
+    <!-- 근태관리 > 근로자별현황 -->
+    <select id="findSafetySituationListCountByCondition"
+            parameterType="map"
+            resultType="long">
+        SELECT
+            COUNT(*) AS CNT
+        FROM attendance_book ATDB
+        INNER JOIN work_place_worker WPW ON WPW.wp_id = ATDB.wp_id   AND WPW.coop_mb_id = ATDB.coop_mb_id AND WPW.worker_mb_id = ATDB.mb_id
+        INNER JOIN work_place_coop WPC ON WPC.wp_id = ATDB.wp_id AND WPC.coop_mb_id = ATDB.coop_mb_id
+        INNER JOIN con_company CC ON CC.cc_id = WPC.cc_id
+        INNER JOIN work_place WP ON WP.wp_id = ATDB.wp_id
+        LEFT JOIN work_section WS ON WS.section_cd = WPW.work_section_b
+        WHERE 'x' = 'x'
+        <if test='COMPLEX != null and COMPLEX != "" '>
+        AND (
+            CC.cc_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            WPW.coop_mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            WPW.worker_mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            WPW.worker_mb_name like concat( '%', #{COMPLEX} ,'%')
+            OR
+            WS.section_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='workSectionNameB != null and workSectionNameB != "" '>
+            AND WS.section_name like concat( '%', #{workSectionNameB} ,'%')
+        </if>
+        <if test='ccName != null and ccName != "" '>
+            AND CC.cc_name like concat( '%', #{ccName} ,'%')
+        </if>
+        <if test='wpName != null and wpName != "" '>
+            AND WPW.wp_name like concat( '%', #{wpName} ,'%')
+        </if>
+        <if test='coopMbName != null and coopMbName != "" '>
+            AND WPW.coop_mb_name like concat( '%', #{coopMbName} ,'%')
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND WPW.worker_mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND WPW.worker_mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='startDate != null  '>
+            AND ATDB.working_day >= DATE_FORMAT(#{startDate}, '%Y%m%d')
+        </if>
+        <if test='endDate != null  '>
+            AND ATDB.working_day <![CDATA[<=]]> DATE_FORMAT(#{endDate}, '%Y%m%d')
+        </if>
+        <if test='ccId != null and ccId != "" '>
+            AND CC.cc_id = #{ccId}
+        </if>
+        <if test='wpId != null and wpId != "" '>
+            AND WPW.wp_id = #{wpId}
+        </if>
+        <if test='coopMbId != null and coopMbId != "" '>
+            AND WPW.coop_mb_id = #{coopMbId}
+        </if>
+        <if test='workSectionB != null and workSectionB != "" '>
+            AND WPW.work_section_b = #{workSectionB}
+        </if>
+        <if test='workSectionA != null and workSectionA != "" '>
+            AND WS.parent_section_cd = #{workSectionA}
+        </if>
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportCoopByWpAndCoop">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+    </select>
+
+    <select id="getWorkCount" parameterType="map" resultType="java.lang.Integer">
+        select count(distinct WPW.worker_mb_id) as cnt
+        FROM work_place_worker WPW
+        INNER JOIN work_place_coop WPC ON WPC.wp_id = WPW.wp_id AND WPC.coop_mb_id = WPW.coop_mb_id
+        INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+        INNER JOIN attendance_book ATDB ON ATDB.wp_id = WPW.wp_id AND ATDB.mb_id = WPW.worker_mb_id
+                                           AND ATDB.mb_level = 2 AND ATDB.working_day = DATE_FORMAT(NOW(), '%Y%m%d')
+        where WPW.wpw_out = 0
+        AND WPW.wp_id = #{wpId}
+        <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplaceByConCompany">
+            <property name="aliasWp" value="WP"/>
+            <property name="aliasWpAndCoop" value="WPC"/>
+        </include>
+    </select>
+
+</mapper>

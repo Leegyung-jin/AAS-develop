@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.BuildingDao">
+
+  <!-- 현장 디바이스 정보 -->
+  <select id="findListByCondition"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.model.dto.BuildingDto">
+    SELECT
+      BD.building_no
+      ,BD.wp_id
+      ,BD.building_name
+      ,BD.area_type
+      ,BD.contain_roof
+      ,BD.contain_gangform
+      ,BD.floor_upstair
+      ,BD.floor_downstair
+      ,BD.pos_x
+      ,BD.pos_y
+      ,BD.view_floor_file_name
+      ,BD.view_floor_file_name_org
+      ,BD.view_floor_file_path
+      ,BD.view_floor_file_location
+      ,BD.cross_section_file_name
+      ,BD.cross_section_file_name_org
+      ,BD.cross_section_file_path
+      ,BD.cross_section_file_location
+      ,BD.create_date
+      ,BD.creator
+      ,BD.update_date
+      ,BD.updater
+      ,WP.wp_name
+      ,WP.cc_name
+      ,WP.view_map_file_name
+      ,WP.view_map_file_name_org
+      ,WP.view_map_file_path
+      ,WP.view_map_file_location
+      ,IFNULL((
+        SELECT COUNT(*) FROM sensor_building_location SBL WHERE SBL.building_no = BD.building_no
+      ), 0) AS sensor_count
+    FROM building BD
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        BD.building_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='areaType != null '>
+      AND BD.area_type = #{areaType}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND WP.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY BD.update_date DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 현장별 GPS 정책  -->
+  <select id="findListCountByCondition"
+          parameterType="map"
+          resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM building BD
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+        BD.building_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+        OR
+        WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='areaType != null '>
+      AND BD.area_type = #{areaType}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND WP.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+
+  <select id="findById"
+          parameterType="long"
+          resultType="kr.co.hulan.aas.mvc.model.dto.BuildingDto">
+    SELECT
+      BD.building_no
+      ,BD.wp_id
+      ,BD.building_name
+      ,BD.area_type
+      ,BD.contain_roof
+      ,BD.contain_gangform
+      ,BD.floor_upstair
+      ,BD.floor_downstair
+      ,BD.pos_x
+      ,BD.pos_y
+      ,BD.box_x
+      ,BD.box_y
+      ,BD.view_floor_file_name
+      ,BD.view_floor_file_name_org
+      ,BD.view_floor_file_path
+      ,BD.view_floor_file_location
+      ,BD.cross_section_file_name
+      ,BD.cross_section_file_name_org
+      ,BD.cross_section_file_path
+      ,BD.cross_section_file_location
+      ,BD.create_date
+      ,BD.creator
+      ,BD.update_date
+      ,BD.updater
+      ,WP.wp_name
+      ,WP.cc_name
+      ,WP.view_map_file_name
+      ,WP.view_map_file_name_org
+      ,WP.view_map_file_path
+      ,WP.view_map_file_location
+      ,IFNULL((
+          SELECT COUNT(*) FROM sensor_building_location SBL WHERE SBL.building_no = BD.building_no
+      ), 0) AS sensor_count
+      ,(
+        select
+          case when count(ONE_BDF.floor) = 1 then MAX(ONE_BDF.floor) else null end
+        from building_floor ONE_BDF
+        where ONE_BDF.building_no = BD.building_no
+      ) as one_storied_floor
+    FROM building BD
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    WHERE BD.building_no = #{buildingNo}
+  </select>
+
+
+  <!-- 현장 층 정보 -->
+  <select id="findFloorListByCondition"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.model.dto.BuildingFloorDto">
+    SELECT
+      BDF.building_no
+      ,BDF.floor
+      ,BDF.floor_name
+      ,BDF.floor_type
+      ,BDF.activated
+      ,CASE
+          WHEN BDF.view_floor_file_name IS NOT NULL AND BDF.view_floor_file_name != '' THEN BDF.view_floor_file_name
+          ELSE BD.view_floor_file_name
+       END AS view_floor_file_name
+      ,CASE
+        WHEN BDF.view_floor_file_name_org IS NOT NULL AND BDF.view_floor_file_name_org != '' THEN BDF.view_floor_file_name_org
+        ELSE BD.view_floor_file_name_org
+      END AS view_floor_file_name_org
+      ,CASE
+        WHEN BDF.view_floor_file_path IS NOT NULL AND BDF.view_floor_file_path != '' THEN BDF.view_floor_file_path
+        ELSE BD.view_floor_file_path
+      END AS view_floor_file_path
+      ,CASE
+        WHEN BDF.view_floor_file_location IS NOT NULL AND BDF.view_floor_file_location != '' THEN BDF.view_floor_file_location
+        ELSE BD.view_floor_file_location
+      END AS view_floor_file_location
+      ,BD.cross_section_file_name
+      ,BD.cross_section_file_name_org
+      ,BD.cross_section_file_path
+      ,BD.cross_section_file_location
+      ,BDF.update_date
+      ,BDF.updater
+      ,BD.building_name
+      ,WP.wp_id
+      ,WP.wp_name
+      ,WP.cc_name
+      ,IFNULL((
+      SELECT COUNT(*) FROM sensor_building_location SBL WHERE SBL.building_no = BDF.building_no AND SBL.floor = BDF.floor
+      ), 0) AS sensor_count
+    FROM building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      BD.building_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='buildingNo != null '>
+      AND BDF.building_no = #{buildingNo}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND WP.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+    ORDER BY BD.create_date DESC, BDF.floor DESC
+    <if test="startRow != null and pageSize != null ">
+      LIMIT #{startRow}, #{pageSize}
+    </if>
+  </select>
+
+  <!-- 빌딩 층 관리  -->
+  <select id="findFloorListCountByCondition"
+          parameterType="map"
+          resultType="long">
+    SELECT
+    count(*) AS CNT
+    FROM building_floor BDF
+    INNER JOIN building BD ON BD.building_no = BDF.building_no
+    INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    WHERE 'x' = 'x'
+    <if test='COMPLEX != null and COMPLEX != "" '>
+      AND (
+      BD.building_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WP.wp_name like concat( '%', #{COMPLEX} ,'%')
+      OR
+      WP.cc_name like concat( '%', #{COMPLEX} ,'%')
+      )
+    </if>
+    <if test='wpId != null and wpId != "" '>
+      AND WP.wp_id = #{wpId}
+    </if>
+    <if test='buildingNo != null '>
+      AND BDF.building_no = #{buildingNo}
+    </if>
+    <if test='buildingName != null and buildingName != "" '>
+      AND BD.building_name like concat( '%', #{buildingName} ,'%')
+    </if>
+    <if test='wpName != null and wpName != "" '>
+      AND WP.wp_name like concat( '%', #{wpName} ,'%')
+    </if>
+    <if test='ccName != null and ccName != "" '>
+      AND WP.cc_name like concat( '%', #{ccName} ,'%')
+    </if>
+    <include refid="kr.co.hulan.aas.mvc.dao.mapper.LoginUserConditionDao.WhereSupportWorkplace">
+      <property name="aliasWorkplace" value="WP"/>
+    </include>
+  </select>
+
+  <select id="findFloor"
+          parameterType="kr.co.hulan.aas.mvc.model.dto.BuildingFloorDto"
+          resultType="kr.co.hulan.aas.mvc.model.dto.BuildingFloorDto">
+    SELECT
+      BDF.building_no
+      ,BDF.floor
+      ,BDF.floor_name
+      ,BDF.floor_type
+      ,BDF.activated
+      ,BDF.view_floor_file_name
+      ,BDF.view_floor_file_name_org
+      ,BDF.view_floor_file_path
+      ,BDF.view_floor_file_location
+      ,BDF.cross_section_grid_x
+      ,BDF.cross_section_grid_y
+      ,BDF.box_x
+      ,BDF.box_y
+      ,BDF.update_date
+      ,BDF.updater
+      ,BD.building_name
+      ,BD.view_floor_file_name AS default_view_floor_file_name
+      ,BD.view_floor_file_name_org  AS default_view_floor_file_name_org
+      ,BD.view_floor_file_path  AS default_view_floor_file_path
+      ,BD.view_floor_file_location  AS default_view_floor_file_location
+      ,BD.cross_section_file_name
+      ,BD.cross_section_file_name_org
+      ,BD.cross_section_file_path
+      ,BD.cross_section_file_location
+      ,WP.wp_id
+      ,WP.wp_name
+      ,WP.cc_name
+      ,IFNULL((
+         SELECT COUNT(*) FROM sensor_building_location SBL WHERE SBL.building_no = BDF.building_no AND SBL.floor = BDF.floor
+      ), 0) AS sensor_count
+    FROM building_floor BDF
+           INNER JOIN building BD ON BD.building_no = BDF.building_no
+           INNER JOIN work_place WP ON WP.wp_id = BD.wp_id
+    WHERE BDF.building_no = #{buildingNo}
+    AND BDF.floor = #{floor}
+  </select>
+
+</mapper>
+

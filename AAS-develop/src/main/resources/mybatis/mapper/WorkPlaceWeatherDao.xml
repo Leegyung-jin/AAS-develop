@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.WorkPlaceWeatherDao">
+  
+  
+  <sql id="weatherColumns">
+    DATE_FORMAT(${alias}.base_date, '%Y-%m-%d') as ${alias_column}base_date
+    ,DATE_FORMAT(${alias}.base_time, '%H:%i') as ${alias_column}base_time
+    ,${alias}.wp_id as ${alias_column}wp_id
+    ,${alias}.humidity as ${alias_column}humidity
+    ,${alias}.wind_direction  as ${alias_column}wind_direction
+    ,${alias}.wind_speed  as ${alias_column}wind_speed
+    ,${alias}.precipitation_form  as ${alias_column}precipitation_form
+    ,${alias}.precipitation_form_name  as ${alias_column}precipitation_form_name
+    ,${alias}.precipitation  as ${alias_column}precipitation
+    ,${alias}.sky_form  as ${alias_column}sky_form
+    ,${alias}.sky_form_name  as ${alias_column}sky_form_name
+    ,${alias}.rainfall  as ${alias_column}rainfall
+    ,${alias}.temperature  as ${alias_column}temperature
+  </sql>
+  
+  <select id="findWeather"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.infra.weather.WeatherInfo">
+    SELECT
+      WPW.wp_id,
+      DATE_FORMAT(WPW.base_date, '%Y-%m-%d') as base_date,
+      DATE_FORMAT(WPW.base_time, '%H:%i') as base_time,
+      WPW.nx,
+      WPW.ny,
+      WPW.humidity,
+      WPW.humidity_unit,
+      WPW.wind_direction,
+      WPW.wind_speed,
+      WPW.wind_speed_unit,
+      WPW.precipitation_form,
+      WPW.precipitation_form_name,
+      WPW.precipitation,
+      WPW.precipitation_unit,
+      WPW.sky_form,
+      WPW.sky_form_name,
+      WPW.rainfall,
+      WPW.rainfall_unit,
+      WPW.temperature,
+      WPW.temperature_unit,
+      WPW.update_date
+    FROM work_place_weather WPW
+    WHERE WPW.wp_id = #{wpId}
+  </select>
+  
+  <select id="findHiccWeatherInfo"
+    parameterType="string"
+    resultType="kr.co.hulan.aas.mvc.api.hicc.vo.main.HiccWeatherInfoVo">
+    SELECT
+      WPW.wp_id,
+      DATE_FORMAT(WPW.base_date, '%Y-%m-%d') as base_date,
+      DATE_FORMAT(WPW.base_time, '%H:%i') as base_time,
+      WPW.nx,
+      WPW.ny,
+      WPW.humidity,
+      WPW.humidity_unit,
+      WPW.wind_direction,
+      WPW.wind_speed,
+      WPW.wind_speed_unit,
+      WPW.precipitation_form,
+      WPW.precipitation_form_name,
+      WPW.precipitation,
+      WPW.precipitation_unit,
+      WPW.sky_form,
+      WPW.sky_form_name,
+      WPW.rainfall,
+      WPW.rainfall_unit,
+      WPW.temperature,
+      WPW.temperature_unit,
+      AE.pm10_value,
+      AE.pm25_value,
+      WPW.update_date
+    FROM work_place_weather WPW
+    INNER JOIN work_place WP ON WPW.wp_id = WP.wp_id
+    LEFT JOIN air_environment AE on WP.station_name = AE.station_name
+    WHERE WPW.wp_id = #{wpId}
+  </select>
+  
+
+</mapper>
