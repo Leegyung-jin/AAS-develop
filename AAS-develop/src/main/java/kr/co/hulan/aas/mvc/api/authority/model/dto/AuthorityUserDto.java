@@ -20,7 +20,7 @@ public class AuthorityUserDto {
     private String mbName;
 
     @ApiModelProperty(notes = "등급 아이디")
-    private String mbLevel;
+    private Integer mbLevel;
 
     @ApiModelProperty(notes = "등급명")
     private String mbLevelName;

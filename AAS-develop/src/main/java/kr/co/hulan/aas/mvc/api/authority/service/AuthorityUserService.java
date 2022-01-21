@@ -24,21 +24,21 @@ public class AuthorityUserService {
 //    @Autowired
 //    private AuthorityUserDao authorityUserDao;
 
-//    public DefaultPageResult<AuthorityUserDto> findListPage(AuthorityUserListRequest request) {
-//        return DefaultPageResult.<AuthorityUserDto>builder()
-//                .currentPage(request.getPage())
-//                .pageSize(request.getPageSize())
-//                .totalCount(countListByCondition(request.getConditionMap()))
-//                .list(findListByCondition(request.getConditionMap()))
-//                .build();
-//    }
-//
-//    public List<AuthorityUserDto> findListByCondition(Map<String,Object> conditionMap) {
-//        return g5MemberDao.findAuthorityInsertUserListByCondition(AuthenticationHelper.addAdditionalConditionByLevel(conditionMap));
-//    }
-//
-//    private Long countListByCondition(Map<String,Object> conditionMap) {
-//        return g5MemberDao.countfindAuthorityInsertUserListByCondition(AuthenticationHelper.addAdditionalConditionByLevel(conditionMap));
-//    }
+    public DefaultPageResult<AuthorityUserDto> findListPage(AuthorityUserListRequest request) {
+        return DefaultPageResult.<AuthorityUserDto>builder()
+                .currentPage(request.getPage())
+                .pageSize(request.getPageSize())
+                .totalCount(countListByCondition(request.getConditionMap()))
+                .list(findListByCondition(request.getConditionMap()))
+                .build();
+    }
+
+    public List<AuthorityUserDto> findListByCondition(Map<String,Object> conditionMap) {
+        return g5MemberDao.findAuthorityInsertUserListByCondition(AuthenticationHelper.addAdditionalConditionByLevel(conditionMap));
+    }
+
+    private Long countListByCondition(Map<String,Object> conditionMap) {
+        return g5MemberDao.countfindAuthorityInsertUserListByCondition(AuthenticationHelper.addAdditionalConditionByLevel(conditionMap));
+    }
 
 }

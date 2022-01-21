@@ -21,11 +21,17 @@ public class AuthorityUserListRequest extends DefaultPageRequest {
     @ApiModelProperty(notes = "검색 조건값")
     private String searchValue;
 
+    @ApiModelProperty(notes = "등급 아이디")
+    private Integer mbLevel;
+
     @Override
     public Map<String, Object> getConditionMap() {
         Map<String, Object> condition = super.getConditionMap();
         if(StringUtils.isNotBlank(searchName) && StringUtils.isNotBlank(searchValue)){
             condition.put(searchName, searchValue);
+        }
+        if(mbLevel != null){
+            condition.put("mbLevel", mbLevel);
         }
         return condition;
     }

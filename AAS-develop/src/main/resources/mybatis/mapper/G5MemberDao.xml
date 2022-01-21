@@ -1921,6 +1921,66 @@
     </select>
 
     <!--  권한 등록 가능한 사용자 리스트  -->
+    <select id="findAuthorityInsertUserListByCondition"
+        parameterType="map"
+        resultType="kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityUserDto">
+        SELECT
+            MB.mb_id
+             ,MB.mb_name
+             ,MB.mb_level
+             ,MBLV.mb_level_name
+             ,MB.mb_datetime AS create_date
+             ,AUMB.authority_id
+        FROM
+            g5_member MB
+            INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
+            LEFT JOIN authority_mb AUMB ON MB.mb_id = AUMB.mb_id
+        WHERE
+            MB.mb_level != 2
+        <if test='excludeMbLevel != null and excludeMbLevel != "" '>
+            AND MB.mb_level != #{excludeMbLevel}
+        </if>
+        <if test='excludeAuthorityId != null and excludeAuthorityId != "" '>
+            AND MB.mb_id != ( SELECT mb_id
+                              FROM authority_mb
+                              WHERE authority_id = #{excludeAuthorityId});
+        </if>
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+            MB.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            MB.mb_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND MB.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND MB.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='mbLevel != null and mbLevel != "" '>
+            AND MB.mb_level = #{mbLevel}
+        </if>
+    </select>
 
+    <!--  권한 등록 가능한 사용자 수 (count)  -->
+    <select id="countfindAuthorityInsertUserListByCondition"
+        parameterType="map"
+        resultType="long">
+        SELECT COUNT(*)
+        FROM g5_member MB
+        INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
+        LEFT JOIN authority_mb AUMB ON MB.mb_id = AUMB.mb_id
+        WHERE
+        MB.mb_level != 2
+        <if test='excludeMbLevel != null and excludeMbLevel != "" '>
+            AND MB.mb_level != #{excludeMbLevel}
+        </if>
+        <if test='excludeAuthorityId != null and excludeAuthorityId != "" '>
+            AND MB.mb_id != ( SELECT mb_id
+            FROM authority_mb
+            WHERE authority_id = #{excludeAuthorityId});
+    </if>
+    </select>
 </mapper>
 
