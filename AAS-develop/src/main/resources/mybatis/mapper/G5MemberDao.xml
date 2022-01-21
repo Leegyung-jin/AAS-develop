@@ -1961,6 +1961,9 @@
         <if test='mbLevel != null and mbLevel != "" '>
             AND MB.mb_level = #{mbLevel}
         </if>
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
     </select>
 
     <!--  권한 등록 가능한 사용자 수 (count)  -->
@@ -1978,9 +1981,28 @@
         </if>
         <if test='excludeAuthorityId != null and excludeAuthorityId != "" '>
             AND MB.mb_id != ( SELECT mb_id
-            FROM authority_mb
-            WHERE authority_id = #{excludeAuthorityId});
-    </if>
+                              FROM authority_mb
+                              WHERE authority_id = #{excludeAuthorityId});
+        </if>
+        <if test='COMPLEX != null and COMPLEX != "" '>
+            AND (
+            MB.mb_id like concat( '%', #{COMPLEX} ,'%')
+            OR
+            MB.mb_name like concat( '%', #{COMPLEX} ,'%')
+            )
+        </if>
+        <if test='mbId != null and mbId != "" '>
+            AND MB.mb_id like concat( '%', #{mbId} ,'%')
+        </if>
+        <if test='mbName != null and mbName != "" '>
+            AND MB.mb_name like concat( '%', #{mbName} ,'%')
+        </if>
+        <if test='mbLevel != null and mbLevel != "" '>
+            AND MB.mb_level = #{mbLevel}
+        </if>
+        <if test="startRow != null and pageSize != null ">
+            LIMIT #{startRow}, #{pageSize}
+        </if>
     </select>
 </mapper>
 
