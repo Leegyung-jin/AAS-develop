@@ -1,5 +1,6 @@
 package kr.co.hulan.aas.mvc.dao.mapper;
 
+import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityUserDto;
 import kr.co.hulan.aas.mvc.api.member.dto.ConCompanyManagerDto;
 import kr.co.hulan.aas.mvc.api.member.dto.ConstructionSiteManagerDto;
 import kr.co.hulan.aas.mvc.api.member.dto.FieldManagerDto;
@@ -83,5 +84,10 @@ public interface G5MemberDao {
     List<ConstructionSiteManagerDto> findConstructionSiteManagerListByCondition(Map<String,Object> condition);
     Long countConstructionSiteManagerListByCondition(Map<String,Object> condition);
 
+    /******************************************
+     ** 권한 등록 가능한 사용자
+     *******************************************/
+    List<AuthorityUserDto> findAuthorityInsertUserListByCondition(Map<String,Object> condition);
+    Long countfindAuthorityInsertUserListByCondition(Map<String,Object> condition);
 
 }

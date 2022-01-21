@@ -1919,5 +1919,8 @@
             AND G5M.mb_12 = #{ belongCcId }
         </if>
     </select>
+
+    <!--  권한 등록 가능한 사용자 리스트  -->
+
 </mapper>
 
