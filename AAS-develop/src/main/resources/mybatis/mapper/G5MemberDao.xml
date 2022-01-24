@@ -1969,13 +1969,12 @@
     <!--  권한 등록 가능한 사용자 수 (count)  -->
     <select id="countfindAuthorityInsertUserListByCondition"
         parameterType="map"
-        resultType="long">
-        SELECT COUNT(*)
+        resultType="Integer">
+        SELECT COUNT(*) AS CNT
         FROM g5_member MB
         INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
         LEFT JOIN authority_mb AUMB ON MB.mb_id = AUMB.mb_id
-        WHERE
-        MB.mb_level != 2
+        WHERE MB.mb_level != 2
         <if test='excludeMbLevel != null and excludeMbLevel != "" '>
             AND MB.mb_level != #{excludeMbLevel}
         </if>
@@ -1999,9 +1998,6 @@
         </if>
         <if test='mbLevel != null and mbLevel != "" '>
             AND MB.mb_level = #{mbLevel}
-        </if>
-        <if test="startRow != null and pageSize != null ">
-            LIMIT #{startRow}, #{pageSize}
         </if>
     </select>
 </mapper>

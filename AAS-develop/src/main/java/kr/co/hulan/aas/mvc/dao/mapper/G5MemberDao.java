@@ -88,6 +88,6 @@ public interface G5MemberDao {
      ** 권한 등록 가능한 사용자
      *******************************************/
     List<AuthorityUserDto> findAuthorityInsertUserListByCondition(Map<String,Object> condition);
-    Long countfindAuthorityInsertUserListByCondition(Map<String,Object> condition);
+    Integer countfindAuthorityInsertUserListByCondition(Map<String, Object> addAdditionalConditionByLevel);
 
 }

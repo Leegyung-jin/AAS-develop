@@ -25,6 +25,7 @@ public class AuthorityUserService {
 //    private AuthorityUserDao authorityUserDao;
 
     public DefaultPageResult<AuthorityUserDto> findListPage(AuthorityUserListRequest request) {
+        Integer cnt = countListByCondition(request.getConditionMap());
         return DefaultPageResult.<AuthorityUserDto>builder()
                 .currentPage(request.getPage())
                 .pageSize(request.getPageSize())
@@ -37,7 +38,7 @@ public class AuthorityUserService {
         return g5MemberDao.findAuthorityInsertUserListByCondition(AuthenticationHelper.addAdditionalConditionByLevel(conditionMap));
     }
 
-    private Long countListByCondition(Map<String,Object> conditionMap) {
+    private Integer countListByCondition(Map<String,Object> conditionMap) {
         return g5MemberDao.countfindAuthorityInsertUserListByCondition(AuthenticationHelper.addAdditionalConditionByLevel(conditionMap));
     }
 
