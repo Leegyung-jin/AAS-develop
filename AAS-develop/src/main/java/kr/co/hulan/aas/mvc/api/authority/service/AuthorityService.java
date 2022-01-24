@@ -77,7 +77,6 @@ public class AuthorityService {
 
     @Transactional("transactionManager")
     public String create(AuthorityCreateRequest request) {
-//    public void create(AuthorityCreateRequest request) {
         SecurityUser loginUser = AuthenticationHelper.getSecurityUser();
         if (loginUser == null) {
             throw new CommonException(BaseCode.ERR_GRADE_EXCEPTION.code(), BaseCode.ERR_GRADE_EXCEPTION.message());
