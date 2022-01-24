@@ -10,8 +10,10 @@ import kr.co.hulan.aas.common.model.res.DefaultPageResult;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityCreateRequest;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityExportRequest;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityListRequest;
+import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityUpdateRequest;
 import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityDto;
 import kr.co.hulan.aas.mvc.api.authority.service.AuthorityService;
+import kr.co.hulan.aas.mvc.api.level.controller.request.LevelUpdateRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,7 +43,7 @@ public class AuthorityController {
 
     @ApiOperation(value = "권한 조회", notes = "권한 정보를 제공한다.")
     @ApiImplicitParams({
-            @ApiImplicitParam(name = "authorityId", value = "권한 아이디", required = true, dataType = "Integer", paramType = "path")
+            @ApiImplicitParam(name = "authorityId", value = "권한 아이디", required = true, dataType = "String", paramType = "path")
     })
     @GetMapping(value="/{authorityId}", produces="application/json;charset=UTF-8")
     public DefaultHttpRes<AuthorityDto> detail(
@@ -56,5 +58,23 @@ public class AuthorityController {
         authorityService.create(request);
         return new DefaultHttpRes(BaseCode.SUCCESS);
     }
+
+    @ApiOperation(value = "권한 수정", notes = "권한 정보를 수정한다.")
+    @ApiImplicitParams({ @ApiImplicitParam(name = "authorityId", value = "권한 아이디", required = true, dataType = "Integer", paramType = "path") })
+    @PutMapping(value="/{authorityId}", produces="application/json;charset=UTF-8")
+    public DefaultHttpRes update(@Valid @RequestBody AuthorityUpdateRequest request,
+                                 @PathVariable(value = "authorityId", required = true) String authorityId, String mbId) {
+        authorityService.update(request, authorityId, mbId);
+        return new DefaultHttpRes(BaseCode.SUCCESS);
+    }
+
+    @ApiOperation(value = "권한 삭제", notes = "권한 정보를 삭제한다.")
+    @ApiImplicitParams({ @ApiImplicitParam(name = "authorityId", value = "권한 아이디", required = true, dataType = "Integer", paramType = "path") })
+    @DeleteMapping(value = "/{authorityId}", produces="application/json;charset=UTF-8")
+    public DefaultHttpRes delete(@PathVariable(value = "authorityId", required = true) String authorityId) {
+        authorityService.delete(authorityId);
+        return new DefaultHttpRes(BaseCode.SUCCESS);
+    }
+
 
 }

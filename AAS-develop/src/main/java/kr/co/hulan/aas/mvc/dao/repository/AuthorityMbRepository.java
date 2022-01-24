@@ -6,12 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
 public interface AuthorityMbRepository extends JpaRepository<AuthorityMb, AuthorityMbKey> {
 
-//    List<AuthorityMb> findauthorityIdAndmbLevel(String authorityId, Integer mbLevel);
-//    @Modifying
-//    @Query("delete from AuthorityMb AUMB where AUMB.MbId =:mbId")
-//    int deleteByMbId(String mbId);
+    @Transactional
+    @Modifying
+    @Query("delete from AuthorityMb AUMB where AUMB.mbId =:mbId")
+    int deleteByMbId(String mbId);
 }

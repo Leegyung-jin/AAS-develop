@@ -7,6 +7,7 @@ import kr.co.hulan.aas.common.utils.AuthenticationHelper;
 import kr.co.hulan.aas.config.security.oauth.model.SecurityUser;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityCreateRequest;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityListRequest;
+import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityUpdateRequest;
 import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityDto;
 import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityUserDto;
 import kr.co.hulan.aas.mvc.dao.mapper.AuthorityDao;
@@ -64,6 +65,7 @@ public class AuthorityService {
         List<String> selectedLevelList = authorityDao.findSelectedLevelList(authorityId);
         List<AuthorityUserDto> usedAuthorityUserList = authorityDao.findUsedAuthorityUserList(authorityId);
 //        Integer countfindUsedAuthorityUserList = authorityDao.countfindUsedAuthorityUserList(authorityId);
+
         // el-transfer
         currentVo.setSelectedLevelList(selectedLevelList);
         currentVo.setUsedAuthorityUserList(usedAuthorityUserList);
@@ -124,5 +126,63 @@ public class AuthorityService {
             authorityMbRepository.saveAll(saveAuthrityUserList);
         }
         return saveEntity.getAuthorityName();
+    }
+
+    public void update(AuthorityUpdateRequest request, String authorityId, String mbId) {
+        SecurityUser loginUser = AuthenticationHelper.getSecurityUser();
+        if (loginUser == null) {
+            throw new CommonException(BaseCode.ERR_GRADE_EXCEPTION.code(), BaseCode.ERR_GRADE_EXCEPTION.message());
+        }
+
+        Authority saveEntity = modelMapper.map(request, Authority.class);
+
+        if( saveEntity == null ){
+            throw new CommonException(BaseCode.ERR_DETAIL_EXCEPTION.code(), "권한 정보가 존재하지 않습니다.");
+        }
+
+        modelMapper.map(request, saveEntity);
+        saveEntity.setUpdater(loginUser.getMbId());
+        saveEntity.setUpdateDate(new Date());
+
+        authorityRepository.save(saveEntity);
+
+        authorityLevelRepository.deleteByAuthorityId(authorityId);
+        if(request.getSelectedLevelList() != null && request.getSelectedLevelList().size() > 0){
+            List<AuthorityLevel> saveLevelList = new ArrayList<>();
+            for(Integer mbLevel : request.getSelectedLevelList()) {
+                AuthorityLevel authLevel = new AuthorityLevel();
+                authLevel.setMbLevel(mbLevel);
+                authLevel.setAuthorityId(request.getAuthorityId());
+                authLevel.setUpdater(loginUser.getMbId());
+                authLevel.setUpdateDate(new Date());
+                saveLevelList.add(authLevel);
+            }
+            authorityLevelRepository.saveAll(saveLevelList);
+        }
+
+        authorityMbRepository.deleteByMbId(mbId);
+        if(request.getAuthorityUserList() != null && request.getAuthorityUserList().size() > 0){
+            List<AuthorityMb> saveAuthrityUserList = new ArrayList<>();
+            List<String> authorityUserList = request.getAuthorityUserList();
+            for(String memberId : authorityUserList) {
+                AuthorityMb auMbList = new AuthorityMb();
+                auMbList.setMbId(memberId);
+                auMbList.setAuthorityId(request.getAuthorityId());
+                auMbList.setUpdater(loginUser.getMbId());
+                auMbList.setUpdateDate(new Date());
+                saveAuthrityUserList.add(auMbList);
+            }
+            authorityMbRepository.saveAll(saveAuthrityUserList);
+        }
+    }
+
+    @Transactional("transactionManager")
+    public int delete(String authorityId) {
+        Authority saveEntity = authorityRepository.findById(authorityId).orElse(null);
+        if(saveEntity != null) {
+            authorityRepository.delete(saveEntity);
+            return 1;
+        }
+        return 0;
     }
 }
