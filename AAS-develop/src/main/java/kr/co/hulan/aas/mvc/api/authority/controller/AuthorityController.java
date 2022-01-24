@@ -7,9 +7,9 @@ import io.swagger.annotations.ApiOperation;
 import kr.co.hulan.aas.common.code.BaseCode;
 import kr.co.hulan.aas.common.model.res.DefaultHttpRes;
 import kr.co.hulan.aas.common.model.res.DefaultPageResult;
+import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityCreateRequest;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityExportRequest;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityListRequest;
-import kr.co.hulan.aas.mvc.api.authority.controller.response.AuthorityResponse;
 import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityDto;
 import kr.co.hulan.aas.mvc.api.authority.service.AuthorityService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +29,6 @@ public class AuthorityController {
     @ApiOperation(value = "권한 검색", notes = "권한 정보 검색을 제공한다.", produces = "application/json;charset=UTF-8")
     @PostMapping(value = "/search", produces = "application/json;charset=UTF-8")
     public DefaultHttpRes<DefaultPageResult<AuthorityDto>> search(@RequestBody @Valid AuthorityListRequest request) {
-//    public DefaultHttpRes<AuthorityResponse> search(@RequestBody @Valid AuthorityListRequest request) {
         return new DefaultHttpRes(BaseCode.SUCCESS, authorityService.findListPage(request));
     }
 
@@ -48,6 +47,14 @@ public class AuthorityController {
     public DefaultHttpRes<AuthorityDto> detail(
             @PathVariable(value = "authorityId", required = true) String authorityId){
         return new DefaultHttpRes(BaseCode.SUCCESS,  authorityService.findInfo(authorityId));
+    }
+
+    @ApiOperation(value = "권한 등록", notes = "권한 정보 등록을 제공한다.")
+    @PostMapping(produces="application/json;charset=UTF-8")
+    public DefaultHttpRes<AuthorityDto> createCompany(
+            @Valid @RequestBody AuthorityCreateRequest request) {
+        authorityService.create(request);
+        return new DefaultHttpRes(BaseCode.SUCCESS);
     }
 
 }
