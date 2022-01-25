@@ -30,7 +30,7 @@
     <if test='authorityName != null and authorityName != "" '>
       AND AUTH.authority_name like concat( '%', #{authorityName} ,'%')
     </if>
-    ORDER BY AUTH.authority_id DESC
+    ORDER BY AUTH.creator DESC
     <if test="startRow != null and pageSize != null ">
       LIMIT #{startRow}, #{pageSize}
     </if>
@@ -98,16 +98,10 @@
           INNER JOIN authority_mb AUMB ON MB.mb_id = AUMB.mb_id
           INNER JOIN authority AUTH ON AUMB.authority_id = AUTH.authority_id
           WHERE 'x' = 'x'
-/*  삭제예정
-    SELECT MB.mb_id, MB.mb_name, MBLV.mb_level, MBLV.mb_level_name, MBLV.updater, MBLV.update_date, AULV.authority_id
-    FROM   g5_member MB
-    INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
-    INNER JOIN authority_level AULV ON MBLV.mb_level = AULV.mb_level
-    INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id
-    WHERE  'x' = 'x'*/
     <if test='value != null and value != "" '>
       AND AUMB.authority_id = #{value}
     </if>
+
   </select>
 
   <!-- 검색된 권한 개수 -->

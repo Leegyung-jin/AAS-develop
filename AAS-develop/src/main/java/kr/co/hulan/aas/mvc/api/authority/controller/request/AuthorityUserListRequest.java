@@ -24,6 +24,15 @@ public class AuthorityUserListRequest extends DefaultPageRequest {
     @ApiModelProperty(notes = "등급 아이디")
     private Integer mbLevel;
 
+    @ApiModelProperty(notes = "권한 아이디")
+    private String authorityId;
+
+    @ApiModelProperty(notes = "제외할 등급 아이디")
+    private Integer excludeMbLevel;
+
+    @ApiModelProperty(notes = "제외할 권한 아이디")
+    private String excludeAuthorityId;
+
     @Override
     public Map<String, Object> getConditionMap() {
         Map<String, Object> condition = super.getConditionMap();
@@ -32,6 +41,15 @@ public class AuthorityUserListRequest extends DefaultPageRequest {
         }
         if(mbLevel != null){
             condition.put("mbLevel", mbLevel);
+        }
+        if( StringUtils.isNotBlank(authorityId)){
+            condition.put("authorityId", authorityId);
+        }
+        if(excludeMbLevel != null){
+            condition.put("excludeMbLevel", excludeMbLevel);
+        }
+        if(StringUtils.isNotBlank(excludeAuthorityId)) {
+            condition.put("excludeAuthorityId", excludeAuthorityId);
         }
         return condition;
     }
