@@ -5,7 +5,10 @@ import io.swagger.annotations.ApiOperation;
 import kr.co.hulan.aas.common.code.BaseCode;
 import kr.co.hulan.aas.common.model.res.DefaultHttpRes;
 import kr.co.hulan.aas.common.model.res.DefaultPageResult;
+import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityExportRequest;
+import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityUserExportRequest;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityUserListRequest;
+import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityDto;
 import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityUserDto;
 import kr.co.hulan.aas.mvc.api.authority.service.AuthorityUserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,5 +33,12 @@ public class AuthorityUserController {
     public DefaultHttpRes<DefaultPageResult<AuthorityUserDto>> searchAuthorityUser(
             @Valid @RequestBody AuthorityUserListRequest request) {
         return new DefaultHttpRes<DefaultPageResult<AuthorityUserDto>>(BaseCode.SUCCESS, authorityUserService.findListPage(request));
+    }
+
+    @ApiOperation(value = "권한 Export", notes = "권한을 Export 제공한다.", produces = "application/json;charset=UTF-8")
+    @PostMapping(value = "/export", produces = "application/json;charset=UTF-8")
+    public DefaultHttpRes<List<AuthorityUserDto>> export(
+            @Valid @RequestBody AuthorityUserExportRequest request) {
+        return new DefaultHttpRes<List<AuthorityUserDto>>(BaseCode.SUCCESS, authorityUserService.findListByCondition(request.getConditionMap()));
     }
 }
