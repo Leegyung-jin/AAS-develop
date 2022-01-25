@@ -13,7 +13,6 @@ import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityListRequest
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityUpdateRequest;
 import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityDto;
 import kr.co.hulan.aas.mvc.api.authority.service.AuthorityService;
-import kr.co.hulan.aas.mvc.api.level.controller.request.LevelUpdateRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,8 +62,8 @@ public class AuthorityController {
     @ApiImplicitParams({ @ApiImplicitParam(name = "authorityId", value = "권한 아이디", required = true, dataType = "Integer", paramType = "path") })
     @PutMapping(value="/{authorityId}", produces="application/json;charset=UTF-8")
     public DefaultHttpRes update(@Valid @RequestBody AuthorityUpdateRequest request,
-                                 @PathVariable(value = "authorityId", required = true) String authorityId, String mbId) {
-        authorityService.update(request, authorityId, mbId);
+                                 @PathVariable(value = "authorityId", required = true) String authorityId) {
+        authorityService.update(request, authorityId);
         return new DefaultHttpRes(BaseCode.SUCCESS);
     }
 

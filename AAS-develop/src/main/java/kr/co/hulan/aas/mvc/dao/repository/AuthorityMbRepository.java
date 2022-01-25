@@ -13,6 +13,6 @@ public interface AuthorityMbRepository extends JpaRepository<AuthorityMb, Author
 
     @Transactional
     @Modifying
-    @Query("delete from AuthorityMb AUMB where AUMB.mbId =:mbId")
-    int deleteByMbId(String mbId);
+    @Query("delete from AuthorityMb AUMB where AUMB.mbId NOT IN(:mbId) and AUMB.authorityId =:authorityId")
+    int deleteByMbId(String mbId, String authorityId);
 }

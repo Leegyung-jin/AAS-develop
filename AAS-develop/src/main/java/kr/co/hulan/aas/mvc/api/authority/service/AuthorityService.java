@@ -20,10 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class AuthorityService {
@@ -128,14 +125,13 @@ public class AuthorityService {
         return saveEntity.getAuthorityName();
     }
 
-    public void update(AuthorityUpdateRequest request, String authorityId, String mbId) {
+    public void update(AuthorityUpdateRequest request, String authorityId) {
         SecurityUser loginUser = AuthenticationHelper.getSecurityUser();
         if (loginUser == null) {
             throw new CommonException(BaseCode.ERR_GRADE_EXCEPTION.code(), BaseCode.ERR_GRADE_EXCEPTION.message());
         }
 
-        Authority saveEntity = modelMapper.map(request, Authority.class);
-
+        Authority saveEntity = authorityRepository.findById(authorityId).orElse(null);
         if( saveEntity == null ){
             throw new CommonException(BaseCode.ERR_DETAIL_EXCEPTION.code(), "권한 정보가 존재하지 않습니다.");
         }
@@ -147,6 +143,7 @@ public class AuthorityService {
         authorityRepository.save(saveEntity);
 
         authorityLevelRepository.deleteByAuthorityId(authorityId);
+
         if(request.getSelectedLevelList() != null && request.getSelectedLevelList().size() > 0){
             List<AuthorityLevel> saveLevelList = new ArrayList<>();
             for(Integer mbLevel : request.getSelectedLevelList()) {
@@ -160,10 +157,18 @@ public class AuthorityService {
             authorityLevelRepository.saveAll(saveLevelList);
         }
 
-        authorityMbRepository.deleteByMbId(mbId);
+        // 삭제
+        List<String> authorityUserList = request.getAuthorityUserList();
+        if(authorityUserList.size() > 0) {
+            for(String i : authorityUserList){
+                authorityMbRepository.deleteByMbId(i, authorityId);
+            }
+        }
+
+        // 등록
         if(request.getAuthorityUserList() != null && request.getAuthorityUserList().size() > 0){
             List<AuthorityMb> saveAuthrityUserList = new ArrayList<>();
-            List<String> authorityUserList = request.getAuthorityUserList();
+            authorityUserList = request.getAuthorityUserList();
             for(String memberId : authorityUserList) {
                 AuthorityMb auMbList = new AuthorityMb();
                 auMbList.setMbId(memberId);

@@ -30,7 +30,7 @@
     <if test='authorityName != null and authorityName != "" '>
       AND AUTH.authority_name like concat( '%', #{authorityName} ,'%')
     </if>
-    ORDER BY AUTH.creator DESC
+    ORDER BY AUTH.create_date DESC
     <if test="startRow != null and pageSize != null ">
       LIMIT #{startRow}, #{pageSize}
     </if>
@@ -52,10 +52,10 @@
       )
     </if>
     <if test='authorityId != null and authorityId != "" '>
-      AND MBLV.authority_id like concat( '%', #{authorityId} ,'%')
+      AND AUTH.authority_id like concat( '%', #{authorityId} ,'%')
     </if>
     <if test='authorityName != null and authorityName != "" '>
-      AND MBLV.authority_name like concat( '%', #{authorityName} ,'%')
+      AND AUTH.authority_name like concat( '%', #{authorityName} ,'%')
     </if>
   </select>
 

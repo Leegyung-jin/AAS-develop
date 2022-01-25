@@ -30,4 +30,5 @@ public class AuthorityUpdateRequest {
 
     @ApiModelProperty(notes = "권한 사용자 리스트")
     private List<String> authorityUserList;
+
 }
