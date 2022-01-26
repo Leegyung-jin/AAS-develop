@@ -2,6 +2,7 @@ package kr.co.hulan.aas.mvc.api.authority.service;
 
 import kr.co.hulan.aas.common.model.res.DefaultPageResult;
 import kr.co.hulan.aas.common.utils.AuthenticationHelper;
+import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityUserExportRequest;
 import kr.co.hulan.aas.mvc.api.authority.controller.request.AuthorityUserListRequest;
 import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityUserDto;
 import kr.co.hulan.aas.mvc.dao.mapper.AuthorityUserDao;
@@ -10,6 +11,7 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +25,11 @@ public class AuthorityUserService {
 
     public DefaultPageResult<AuthorityUserDto> findListPage(AuthorityUserListRequest request) {
 //        Integer cnt = countListByCondition(request.getConditionMap());
+        System.out.println("***********************");
+        System.out.println("***********************");
+        System.out.println(request);
+        System.out.println("***********************");
+        System.out.println("***********************");
         return DefaultPageResult.<AuthorityUserDto>builder()
                 .currentPage(request.getPage())
                 .pageSize(request.getPageSize())
@@ -32,6 +39,15 @@ public class AuthorityUserService {
     }
 
     public List<AuthorityUserDto> findListByCondition(Map<String,Object> conditionMap) {
+//        AuthorityUserDto currentVo =
+
+
+//    public List<AuthorityUserDto> findListByCondition(AuthorityUserListRequest request, Map<String,Object> conditionMap) {
+//        if (request.getExcludeMbLevelList() != null && request.getExcludeMbLevelList().size() > 0) {
+//            List<Integer> excludeMbLevelList = new ArrayList<>();
+//            for (Integer mbLevel : request.getExcludeMbLevelList()) {
+//            }
+//        }
         return g5MemberDao.findAuthorityInsertUserListByCondition(AuthenticationHelper.addAdditionalConditionByLevel(conditionMap));
     }
 

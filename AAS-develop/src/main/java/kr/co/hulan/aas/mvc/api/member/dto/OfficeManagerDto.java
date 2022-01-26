@@ -2,9 +2,15 @@ package kr.co.hulan.aas.mvc.api.member.dto;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityManagerDto;
+import kr.co.hulan.aas.mvc.model.domain.AuthorityLevel;
+import kr.co.hulan.aas.mvc.model.domain.Level;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.List;
 
 @Data
 @ApiModel(value="OfficeManagerDto", description="발주사 관리자 정보")
@@ -38,7 +44,8 @@ public class OfficeManagerDto {
   @ApiModelProperty(notes = "차단일")
   private String blockDate;
 
-
+  @Autowired
+  private List<AuthorityManagerDto> managerAuthorityList;
 
 
 }

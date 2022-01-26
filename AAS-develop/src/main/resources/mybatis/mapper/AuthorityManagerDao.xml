@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="kr.co.hulan.aas.mvc.dao.mapper.AuthorityManagerDao">
+
+<!--  <select id="findListByCondition"-->
+<!--          parameterType="map"-->
+<!--          resultType="kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityManagerDto">-->
+<!--    SELECT-->
+<!--    MB.mb_id-->
+<!--    ,MB.mb_level-->
+<!--    ,MBLV.mb_level_name-->
+<!--    ,AULV.authority_id-->
+<!--    ,AUTH.authority_name-->
+<!--    FROM g5_member MB-->
+<!--    INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level-->
+<!--    INNER JOIN authority_level AULV ON MB.mb_level = AULV.mb_level-->
+<!--    INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id-->
+<!--    WHERE 'x' = 'x'-->
+<!--    <if test='mbId != null and mbId != "" '>-->
+<!--    AND MB.mb_id = #{mbId}-->
+<!--    </if>-->
+<!--  </select>-->
+
+<!--  <select id="countListByCondition"-->
+<!--          parameterType="map"-->
+<!--          resultType="integer">-->
+<!--    SELECT COUNT(*) AS CNT-->
+<!--    FROM g5_member MB-->
+<!--    INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level-->
+<!--    INNER JOIN authority_level AULV ON MB.mb_level = AULV.mb_level-->
+<!--    INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id-->
+<!--    WHERE 'x' = 'x'-->
+<!--    <if test='mbId != null and mbId != "" '>-->
+<!--    AND MB.mb_id = #{mbId}-->
+<!--    </if>-->
+<!--  </select>-->
+
+
+  <select id="findInfo"
+          parameterType="map"
+          resultType="kr.co.hulan.aas.mvc.api.authority.model.dto.AuthorityManagerDto">
+        SELECT
+        MB.mb_id
+        ,MB.mb_level
+        ,MBLV.mb_level_name
+        ,AULV.authority_id
+        ,AUTH.authority_name
+        FROM g5_member MB
+        INNER JOIN member_level MBLV ON MB.mb_level = MBLV.mb_level
+        INNER JOIN authority_level AULV ON MB.mb_level = AULV.mb_level
+        INNER JOIN authority AUTH ON AULV.authority_id = AUTH.authority_id
+        WHERE 'x' = 'x'
+        <if test='mbId != null and mbId != "" '>
+        AND MB.mb_id = #{mbId}
+        </if>
+  </select>
+
+  <select
+    id="findSelectedAuthorityList"
+    parameterType="map"
+    resultType="java.lang.String">
+    SELECT AUMB.authority_id
+    FROM authority_mb AUMB
+    WHERE 'x' = 'x'
+        <if test='mbId != null and mbId !=""'>
+        AUMB.mb_id = #{mbId}
+        </if>
+  </select>
+
+</mapper>

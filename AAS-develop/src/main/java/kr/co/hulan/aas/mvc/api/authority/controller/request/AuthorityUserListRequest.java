@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -27,8 +28,12 @@ public class AuthorityUserListRequest extends DefaultPageRequest {
     @ApiModelProperty(notes = "권한 아이디")
     private String authorityId;
 
-    @ApiModelProperty(notes = "제외할 등급 아이디")
-    private Integer excludeMbLevel;
+//    @ApiModelProperty(notes = "제외할 등급 아이디")
+//    private Integer excludeMbLevel;
+
+    @ApiModelProperty(notes = "제외할 등급 아이디 목록")
+    private List<Integer> excludeMbLevel;
+
 
     @ApiModelProperty(notes = "제외할 권한 아이디")
     private String excludeAuthorityId;
